@@ -1,51 +1,27 @@
 # SzPOS (Offline-first POS Starter)
 
-A modern POS starter designed for Android tablets + PCs with a colorful, touch-friendly sale experience.
+A scalable starter architecture for a modern POS system targeting Android tablets + PCs.
 
 ## Monorepo layout
 
-- `apps/web`: React + Vite POS frontend (responsive checkout UI)
-- `apps/api`: Express TypeScript backend (POS endpoints)
+- `apps/web`: React + Vite + Tailwind-ready PWA-friendly frontend
+- `apps/api`: Express TypeScript backend with core POS endpoints
 - `packages/shared`: shared POS domain types
 
-## What's improved
+## MVP included
 
-### UI/UX (sale screen)
-
-- Bright, responsive 3-column checkout layout
-- Large touch-friendly quick product buttons
-- Category chips (no dropdown-heavy product picking)
-- Inline line-item quantity controls (+ / -)
-- Variant picker modal for products like Cake size
-- Discount input + clear total breakdown
-- Fast payment actions (Cash / UPI / Card)
-- Keyboard shortcuts:
-  - `Enter` = add first filtered product
-  - `F1` / `F2` / `F3` = quick pay methods
-- Persistent print actions:
-  - Print Receipt
-  - Print Kitchen Ticket
-- Online/offline status badge for cashier confidence
-
-### Offline-first + sync
-
-- Local queue for writes (`localStorage` starter)
-- Manual sync trigger to POST queued changes
-- Sync API returns accepted count + conflict list for inventory updates
-
-### API coverage (MVP+)
-
-- `POST /api/auth/login`
-- `GET /api/products?search=`
-- `POST /api/sales`
-- `GET /api/sales/:id`
-- `GET /api/inventory/low-stock`
-- `POST /api/sync`
-- `GET /api/reports/daily-sales`
-- `POST /api/returns`
-- `POST /api/purchase-orders`
-- `POST /api/printing/receipt`
-- `GET /api/users`
+- Tablet-focused Sale Screen with:
+  - quick product buttons
+  - line-item cart editing (+ / -)
+  - payment action buttons (Cash/UPI/Card)
+  - persistent Print Receipt button
+- Offline-first local queue in frontend (`localStorage` based starter)
+- Sync endpoint contract (`POST /api/sync`)
+- Core API resources:
+  - auth login
+  - products search
+  - sales create/get
+  - low-stock inventory
 
 ## Run locally
 
@@ -72,10 +48,10 @@ npm run dev:api
 npm run dev:web
 ```
 
-## Next steps
+## Next build steps
 
-- Replace `localStorage` queue with IndexedDB (Dexie/PouchDB)
-- Add PostgreSQL schema + migrations for production data integrity
-- Add proper JWT refresh + bcrypt password storage
-- Add ESC/POS transport implementations (LAN, WebUSB, Bluetooth)
-- Add reconciliation UI for sync conflict resolution
+- Replace local queue with IndexedDB (Dexie/PouchDB)
+- Add real PostgreSQL + migrations
+- Add JWT refresh flow + bcrypt persistence
+- Add ESC/POS network and WebUSB print transports
+- Add conflict-resolution policy for inventory writes
