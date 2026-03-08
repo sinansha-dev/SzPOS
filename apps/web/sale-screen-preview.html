@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SzPOS Preview</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <div class="sale-screen">
+    <header><h1>SzPOS Sale Screen</h1><div class="toolbar"><button>Sync</button><button>Print Receipt</button></div></header>
+    <div class="layout">
+      <section class="panel left">
+        <input placeholder="Search barcode / name" />
+        <div class="quick-grid">
+          <button class="quick-btn">Chocolate Cake <span>₹120</span></button>
+          <button class="quick-btn">Donut <span>₹40</span></button>
+          <button class="quick-btn">Cookie <span>₹30</span></button>
+          <button class="quick-btn">Brownie <span>₹60</span></button>
+        </div>
+      </section>
+      <section class="panel middle"><h2>Cart</h2><div class="line-item"><strong>Chocolate Cake</strong><div class="qty-controls"><button>-</button><span>1</span><button>+</button></div></div></section>
+      <section class="panel right"><h2>Totals</h2><p>Subtotal: ₹200.00</p><p>GST: ₹10.00</p><p class="total">Total: ₹210.00</p><div class="pay-grid"><button>Cash</button><button>UPI</button><button>Card</button></div><button class="print">Print Receipt</button></section>
+    </div>
+  </div>
+</body>
+</html>
