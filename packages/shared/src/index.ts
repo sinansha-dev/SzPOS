@@ -7,26 +7,13 @@ export interface User {
   email: string;
 }
 
-export interface Store {
-  id: string;
-  name: string;
-  timezone: string;
-}
-
 export interface Product {
   id: string;
   sku: string;
   name: string;
-  category: string;
   price: number;
   taxRate: number;
-}
-
-export interface ProductVariant {
-  id: string;
-  productId: string;
-  name: string;
-  priceDelta: number;
+  category?: string;
 }
 
 export interface SaleItem {
@@ -53,12 +40,4 @@ export interface Sale {
     amount: number;
   };
   printStatus: "not_printed" | "printed" | "failed";
-}
-
-export interface PrinterConfig {
-  mode: "network" | "webusb" | "bluetooth";
-  ip?: string;
-  port?: number;
-  autoPrintReceipt: boolean;
-  autoPrintKitchen: boolean;
 }
