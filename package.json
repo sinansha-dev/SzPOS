@@ -1,0 +1,16 @@
+{
+  "name": "szpos",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @szpos/web run dev",
+    "dev:api": "npm --workspace @szpos/api run dev",
+    "dev": "echo 'Run web and api in separate terminals: npm run dev:web / npm run dev:api'",
+    "build": "npm --workspace @szpos/web run build && npm --workspace @szpos/api run build",
+    "check": "npm --workspace @szpos/api run typecheck && npm --workspace @szpos/web run typecheck"
+  }
+}
