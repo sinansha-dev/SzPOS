@@ -14,6 +14,7 @@ export function SaleScreenPage() {
   const [status, setStatus] = useState("Ready");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,12 +23,28 @@ export function SaleScreenPage() {
 
   const loadProducts = async () => {
     try {
+      setBackendStatus("checking");
       const data = await apiClient.getProducts();
       setProducts(data || []);
+      setBackendStatus("online");
       setLoading(false);
     } catch (err) {
       setError("Failed to load products");
+      setBackendStatus("offline");
       setLoading(false);
+    }
+  };
+
+  const checkBackend = async () => {
+    try {
+      setBackendStatus("checking");
+      await apiClient.getProducts();
+      setBackendStatus("online");
+      setStatus("Backend connected ✓");
+      setTimeout(() => setStatus("Ready"), 2000);
+    } catch {
+      setBackendStatus("offline");
+      setStatus("Backend offline");
     }
   };
 
@@ -207,6 +224,10 @@ export function SaleScreenPage() {
               🔄 Sync
             </button>
 
+            <button onClick={checkBackend} className="sync-btn">
+              {backendStatus === "checking" ? "⏳ Checking Backend..." : backendStatus === "online" ? "🟢 Backend Online" : "🔴 Backend Offline"}
+            </button>
+
             <button onClick={() => window.print()} className="print-btn">
               <Printer size={18} />
               Print Receipt
@@ -214,6 +235,30 @@ export function SaleScreenPage() {
 
             <div className="status-message">{status}</div>
           </div>
+        </div>
+
+        <div className="receipt-print-only">
+          <h2>SzPOS Receipt</h2>
+          <p>{new Date().toLocaleString()}</p>
+          <hr />
+          {cart.length === 0 ? (
+            <p>No items in cart</p>
+          ) : (
+            <>
+              {cart.map((line) => (
+                <div key={line.id} className="receipt-line">
+                  <span>{line.name} × {line.qty}</span>
+                  <span>₹{(line.price * line.qty).toFixed(2)}</span>
+                </div>
+              ))}
+              <hr />
+              <div className="receipt-line">
+                <strong>Total</strong>
+                <strong>₹{total.toFixed(2)}</strong>
+              </div>
+            </>
+          )}
+          <p className="receipt-footer">Thank you for shopping!</p>
         </div>
       </div>
     </PageLayout>
