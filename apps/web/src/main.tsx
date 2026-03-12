@@ -11,7 +11,6 @@ import { ReportsPage } from "./components/ReportsPage";
 import { InventoryPage } from "./components/InventoryPage";
 import { UsersPage } from "./components/UsersPage";
 import { SettingsPage } from "./components/SettingsPage";
-import { MentionsPage } from "./components/MentionsPage";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -58,14 +57,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <ProtectedRoute>
                   <UsersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mentions"
-              element={
-                <ProtectedRoute>
-                  <MentionsPage />
                 </ProtectedRoute>
               }
             />

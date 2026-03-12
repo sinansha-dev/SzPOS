@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { LogOut, ShoppingCart, BarChart3, Settings, Users, FileText, AtSign, Moon, Sun } from "lucide-react";
+import { LogOut, ShoppingCart, BarChart3, Settings, Users, FileText, Moon, Sun } from "lucide-react";
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -17,7 +17,6 @@ export function Dashboard() {
     { icon: <ShoppingCart size={32} />, title: "Point of Sale", description: "Process sales and transactions", path: "/sales", color: "#3b82f6" },
     { icon: <BarChart3 size={32} />, title: "Reports & Analytics", description: "View sales reports and analytics", path: "/reports", color: "#10b981" },
     { icon: <Users size={32} />, title: "Users", description: "Manage staff and permissions", path: "/users", color: "#f59e0b" },
-    { icon: <AtSign size={32} />, title: "Mentions", description: "Create internal notes with @username mentions", path: "/mentions", color: "#06b6d4" },
     { icon: <FileText size={32} />, title: "Inventory", description: "Manage products and stock", path: "/inventory", color: "#8b5cf6" },
     { icon: <Settings size={32} />, title: "Settings", description: "Configure system settings", path: "/settings", color: "#6b7280" }
   ];

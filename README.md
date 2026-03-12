@@ -51,7 +51,6 @@ npm run dev:web
 ## New features in this update
 
 - Dark mode toggle across dashboard and module pages
-- Internal mention notes feature (`@username`)
 - Local PostgreSQL setup documentation and starter schema
 
 ## PostgreSQL local setup

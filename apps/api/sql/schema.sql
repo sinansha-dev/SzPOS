@@ -25,12 +25,6 @@ CREATE TABLE IF NOT EXISTS sales (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS mentions (
-  id TEXT PRIMARY KEY,
-  note TEXT NOT NULL,
-  created_by TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 
 INSERT INTO products (id, sku, name, price, tax_rate, stock)
 VALUES
