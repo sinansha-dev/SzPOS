@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
+import { ArrowLeft, LogOut, Moon, Sun } from "lucide-react";
 import { ReactNode } from "react";
 
 interface PageLayoutProps {
@@ -10,6 +11,7 @@ interface PageLayoutProps {
 
 export function PageLayout({ title, children }: PageLayoutProps) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -27,6 +29,10 @@ export function PageLayout({ title, children }: PageLayoutProps) {
           <h1 className="nav-logo">{title}</h1>
         </div>
         <div className="nav-right">
+          <button onClick={toggleTheme} className="theme-btn" title="Toggle dark mode">
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
           <div className="user-info">
             <span className="user-name">{user?.name}</span>
           </div>
@@ -36,9 +42,7 @@ export function PageLayout({ title, children }: PageLayoutProps) {
         </div>
       </nav>
 
-      <div className="page-content">
-        {children}
-      </div>
+      <div className="page-content">{children}</div>
     </div>
   );
 }

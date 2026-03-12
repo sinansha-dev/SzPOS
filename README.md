@@ -48,10 +48,18 @@ npm run dev:api
 npm run dev:web
 ```
 
+## New features in this update
+
+- Dark mode toggle across dashboard and module pages
+- Local PostgreSQL setup documentation and starter schema
+
+## PostgreSQL local setup
+
+See `POSTGRES_SETUP.md` for step-by-step setup and schema initialization.
+
 ## Next build steps
 
 - Replace local queue with IndexedDB (Dexie/PouchDB)
-- Add real PostgreSQL + migrations
 - Add JWT refresh flow + bcrypt persistence
 - Add ESC/POS network and WebUSB print transports
 - Add conflict-resolution policy for inventory writes
