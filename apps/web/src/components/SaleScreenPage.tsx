@@ -14,7 +14,7 @@ export function SaleScreenPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: "CASH" | "UPI" | "CARD"; timestamp: string } | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProducts();
@@ -274,14 +274,13 @@ export function SaleScreenPage() {
 
         <div className="receipt-print-only">
           <h2>SzPOS Receipt</h2>
-          <p>{lastReceipt ? new Date(lastReceipt.timestamp).toLocaleString() : new Date().toLocaleString()}</p>
+          <p>{new Date().toLocaleString()}</p>
           <hr />
-          {!lastReceipt ? (
-            <p>No receipt generated yet</p>
+          {cart.length === 0 ? (
+            <p>No items in cart</p>
           ) : (
             <>
-              <p>Paid by: {lastReceipt.paidBy}</p>
-              {lastReceipt.items.map((line) => (
+              {cart.map((line) => (
                 <div key={line.id} className="receipt-line">
                   <span>{line.name} × {line.qty}</span>
                   <span>₹{(line.price * line.qty).toFixed(2)}</span>
@@ -290,7 +289,7 @@ export function SaleScreenPage() {
               <hr />
               <div className="receipt-line">
                 <strong>Total</strong>
-                <strong>₹{lastReceipt.total.toFixed(2)}</strong>
+                <strong>₹{total.toFixed(2)}</strong>
               </div>
             </>
           )}
