@@ -20,6 +20,15 @@ export function SaleScreenPage() {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    if (!shouldAutoPrint || !lastReceipt) {
+      return;
+    }
+
+    window.print();
+    setShouldAutoPrint(false);
+  }, [shouldAutoPrint, lastReceipt]);
+
   const loadProducts = async () => {
     try {
       setBackendStatus("checking");
@@ -80,7 +89,19 @@ export function SaleScreenPage() {
   function changeQty(id: string, delta: number) {
     setCart((old) =>
       old
-        .map((line) => (line.id === id ? { ...line, qty: Math.max(0, line.qty + delta) } : line))
+        .map((line) => {
+          if (line.id !== id) {
+            return line;
+          }
+
+          const maxQty = Math.max(0, line.stock);
+          const nextQty = Math.min(maxQty, Math.max(0, line.qty + delta));
+          if (delta > 0 && line.qty >= maxQty) {
+            setStatus(`Only ${maxQty} in stock`);
+          }
+
+          return { ...line, qty: nextQty };
+        })
         .filter((line) => line.qty > 0)
     );
   }
