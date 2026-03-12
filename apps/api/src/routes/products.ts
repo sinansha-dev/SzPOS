@@ -36,13 +36,14 @@ productsRouter.put("/:id", (req, res) => {
   }
 
   const body = req.body as Record<string, unknown>;
+  const current = products[productIndex];
   const updated = {
-    ...products[productIndex],
-    ...(body.name && { name: String(body.name) }),
-    ...(body.sku && { sku: String(body.sku) }),
-    ...(body.stock !== undefined && { stock: Number(body.stock) }),
-    ...(body.price !== undefined && { price: Number(body.price) }),
-    ...(body.taxRate !== undefined && { taxRate: Number(body.taxRate) })
+    ...current,
+    name: body.name ? String(body.name) : current.name,
+    sku: body.sku ? String(body.sku) : current.sku,
+    stock: body.stock !== undefined ? Number(body.stock) : current.stock,
+    price: body.price !== undefined ? Number(body.price) : current.price,
+    taxRate: body.taxRate !== undefined ? Number(body.taxRate) : current.taxRate
   };
 
   products[productIndex] = updated;

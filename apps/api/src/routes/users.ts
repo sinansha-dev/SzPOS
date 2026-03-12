@@ -30,12 +30,13 @@ usersRouter.put("/:id", (req, res) => {
   }
 
   const body = req.body as Record<string, unknown>;
+  const current = users[userIndex];
   const updated = {
-    ...users[userIndex],
-    ...(body.name && { name: String(body.name) }),
-    ...(body.username && { username: String(body.username) }),
-    ...(body.role && { role: String(body.role) }),
-    ...(body.status && { status: String(body.status) })
+    ...current,
+    name: body.name ? String(body.name) : current.name,
+    username: body.username ? String(body.username) : current.username,
+    role: body.role ? String(body.role) : current.role,
+    status: body.status ? String(body.status) : current.status
   };
 
   users[userIndex] = updated;

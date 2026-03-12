@@ -11,4 +11,6 @@ export const users = [
   { id: "u_003", name: "Jane Manager", username: "jane", role: "manager", status: "active" }
 ];
 
-export const sales: Record<string, unknown> = {};
+export const sales: Record<string, Record<string, unknown>> = {};
+export const purchaseOrders: Record<string, Record<string, unknown>> = {};
+export const returns: Record<string, Record<string, unknown>> = {};

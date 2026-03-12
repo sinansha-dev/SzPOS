@@ -360,3 +360,15 @@ For issues:
 **Status:** ✅ **PRODUCTION READY**  
 **Last Updated:** March 10, 2026  
 **Version:** 3.0.0 (Full Integration)
+
+---
+
+## 🐘 Local PostgreSQL (No Cloud DB Required)
+
+SzPOS can be configured against a local PostgreSQL instance.
+
+1. Follow `POSTGRES_SETUP.md`.
+2. Run schema script: `apps/api/sql/schema.sql`.
+3. Set `DATABASE_URL` in `apps/api/.env`.
+
+This lets you run the backend with a fully local database setup.
