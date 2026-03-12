@@ -686,6 +686,24 @@ body {
   font-size: 14px;
 }
 
+
+.product-stock {
+  color: var(--text-light);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.product-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.product-btn:disabled:hover {
+  background: var(--lighter);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
 .cart-items {
   flex: 1;
   overflow-y: auto;
