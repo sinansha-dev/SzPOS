@@ -66,7 +66,20 @@ export const apiClient = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("Failed to create sale");
+
+    if (!res.ok) {
+      let errorMessage = "Failed to create sale";
+      try {
+        const payload = await res.json() as { error?: string; details?: string[] };
+        if (payload.error) {
+          errorMessage = payload.details?.length ? `${payload.error}: ${payload.details.join(", ")}` : payload.error;
+        }
+      } catch {
+        // keep generic fallback
+      }
+      throw new Error(errorMessage);
+    }
+
     return res.json();
   },
 

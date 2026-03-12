@@ -1,10 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "./PageLayout";
 import { apiClient } from "../api/client";
 import { Printer, AlertCircle } from "lucide-react";
 
-type Product = { id: string; name: string; price: number; taxRate: number };
+type Product = { id: string; name: string; price: number; taxRate: number; stock: number };
 type CartLine = Product & { qty: number };
 
 export function SaleScreenPage() {
@@ -14,7 +13,8 @@ export function SaleScreenPage() {
   const [status, setStatus] = useState("Ready");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: "CASH" | "UPI" | "CARD"; timestamp: string } | null>(null);
 
   useEffect(() => {
     loadProducts();
@@ -22,12 +22,28 @@ export function SaleScreenPage() {
 
   const loadProducts = async () => {
     try {
+      setBackendStatus("checking");
       const data = await apiClient.getProducts();
       setProducts(data || []);
+      setBackendStatus("online");
       setLoading(false);
     } catch (err) {
       setError("Failed to load products");
+      setBackendStatus("offline");
       setLoading(false);
+    }
+  };
+
+  const checkBackend = async () => {
+    try {
+      setBackendStatus("checking");
+      await apiClient.getProducts();
+      setBackendStatus("online");
+      setStatus("Backend connected ✓");
+      setTimeout(() => setStatus("Ready"), 2000);
+    } catch {
+      setBackendStatus("offline");
+      setStatus("Backend offline");
     }
   };
 
@@ -44,8 +60,19 @@ export function SaleScreenPage() {
     setCart((old) => {
       const found = old.find((line) => line.id === product.id);
       if (found) {
+        if (found.qty >= product.stock) {
+          setStatus(`Only ${product.stock} in stock`);
+          return old;
+        }
+
         return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
       }
+
+      if (product.stock <= 0) {
+        setStatus(`${product.name} is out of stock`);
+        return old;
+      }
+
       return [...old, { ...product, qty: 1 }];
     });
   }
@@ -59,25 +86,48 @@ export function SaleScreenPage() {
   }
 
   async function completeSale(paymentMethod: "CASH" | "UPI" | "CARD") {
+    if (cart.length === 0) {
+      return;
+    }
+
+    const snapshot = cart.map((line) => ({ ...line }));
+    const receiptTime = new Date().toISOString();
     const payload = {
       id: `sale_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      items: cart,
+      timestamp: receiptTime,
+      items: snapshot,
       subtotal,
       taxTotal: tax,
       total,
       payment: { method: paymentMethod, amount: total },
-      printStatus: "not_printed"
+      printStatus: "printed"
     };
 
     try {
       await apiClient.createSale(payload);
+      setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
       setCart([]);
+      setProducts((current) =>
+        current.map((product) => {
+          const soldLine = snapshot.find((line) => line.id === product.id);
+          if (!soldLine) {
+            return product;
+          }
+
+          return {
+            ...product,
+            stock: Math.max(0, product.stock - soldLine.qty)
+          };
+        })
+      );
       setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
-      setTimeout(() => setStatus("Ready"), 3000);
       setError("");
+      setTimeout(() => window.print(), 150);
+      setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
-      setError("Failed to save sale");
+      const message = err instanceof Error ? err.message : "Failed to save sale";
+      setError(message);
+      setStatus("Sale failed");
       console.error(err);
     }
   }
@@ -128,9 +178,11 @@ export function SaleScreenPage() {
                   key={product.id}
                   className="product-btn"
                   onClick={() => addProduct(product)}
+                  disabled={product.stock <= 0}
                 >
                   <div className="product-name">{product.name}</div>
                   <div className="product-price">₹{product.price}</div>
+                  <div className="product-stock">Stock: {product.stock}</div>
                 </button>
               ))}
             </div>
@@ -207,6 +259,10 @@ export function SaleScreenPage() {
               🔄 Sync
             </button>
 
+            <button onClick={checkBackend} className="sync-btn">
+              {backendStatus === "checking" ? "⏳ Checking Backend..." : backendStatus === "online" ? "🟢 Backend Online" : "🔴 Backend Offline"}
+            </button>
+
             <button onClick={() => window.print()} className="print-btn">
               <Printer size={18} />
               Print Receipt
@@ -214,6 +270,31 @@ export function SaleScreenPage() {
 
             <div className="status-message">{status}</div>
           </div>
+        </div>
+
+        <div className="receipt-print-only">
+          <h2>SzPOS Receipt</h2>
+          <p>{lastReceipt ? new Date(lastReceipt.timestamp).toLocaleString() : new Date().toLocaleString()}</p>
+          <hr />
+          {!lastReceipt ? (
+            <p>No receipt generated yet</p>
+          ) : (
+            <>
+              <p>Paid by: {lastReceipt.paidBy}</p>
+              {lastReceipt.items.map((line) => (
+                <div key={line.id} className="receipt-line">
+                  <span>{line.name} × {line.qty}</span>
+                  <span>₹{(line.price * line.qty).toFixed(2)}</span>
+                </div>
+              ))}
+              <hr />
+              <div className="receipt-line">
+                <strong>Total</strong>
+                <strong>₹{lastReceipt.total.toFixed(2)}</strong>
+              </div>
+            </>
+          )}
+          <p className="receipt-footer">Thank you for shopping!</p>
         </div>
       </div>
     </PageLayout>
