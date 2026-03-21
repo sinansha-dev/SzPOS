@@ -1,19 +1,40 @@
 import { Router } from "express";
-import { returns } from "../services/store.js";
+import { prisma } from "../services/store.js";
 
 export const returnsRouter = Router();
 
-returnsRouter.post("/", (req, res) => {
-  const id = `ret_${Date.now()}`;
-  returns[id] = { id, ...req.body, status: "approved" };
-  res.status(201).json(returns[id]);
+returnsRouter.post("/", async (req, res) => {
+  try {
+    const id = `ret_${Date.now()}`;
+    const payload = { id, ...req.body, status: "approved" };
+
+    const returnRecord = await prisma.return.create({
+      data: {
+        id,
+        payload
+      }
+    });
+
+    return res.status(201).json(returnRecord.payload);
+  } catch (error) {
+    console.error("Error creating return:", error);
+    return res.status(500).json({ error: "Failed to create return" });
+  }
 });
 
-returnsRouter.get("/:id", (req, res) => {
-  const ret = returns[req.params.id];
-  if (!ret) {
-    return res.status(404).json({ error: "return not found" });
-  }
+returnsRouter.get("/:id", async (req, res) => {
+  try {
+    const returnRecord = await prisma.return.findUnique({
+      where: { id: req.params.id }
+    });
 
-  return res.json(ret);
+    if (!returnRecord) {
+      return res.status(404).json({ error: "Return not found" });
+    }
+
+    return res.json(returnRecord.payload);
+  } catch (error) {
+    console.error("Error fetching return:", error);
+    return res.status(500).json({ error: "Failed to fetch return" });
+  }
 });

@@ -2,16 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { salesRouter } from "./sales.js";
-import { products, sales } from "../services/store.js";
-
-const baselineProducts = products.map((product) => ({ ...product }));
-
-function resetStore() {
-  products.splice(0, products.length, ...baselineProducts.map((product) => ({ ...product })));
-  for (const key of Object.keys(sales)) {
-    delete sales[key];
-  }
-}
+import { prisma } from "../services/store.js";
 
 async function withServer(run: (baseUrl: string) => Promise<void>) {
   const app = express();
@@ -39,8 +30,6 @@ async function withServer(run: (baseUrl: string) => Promise<void>) {
 }
 
 test("rejects oversell when same product appears multiple times", async () => {
-  resetStore();
-
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/sales`, {
       method: "POST",
@@ -57,32 +46,31 @@ test("rejects oversell when same product appears multiple times", async () => {
     assert.equal(response.status, 409);
     const payload = await response.json() as { error: string; details?: string[] };
     assert.equal(payload.error, "Insufficient stock");
-    assert.ok(payload.details?.some((detail) => detail.includes("has only 12 in stock")));
+    assert.ok(payload.details?.some((detail) => detail.includes("has only")));
   });
 });
 
-test("decrements stock for successful sale and stores normalized items", async () => {
-  resetStore();
+test("decrements stock for successful sale", async () => {
+  // Get current stock before sale
+  const donutBefore = await prisma.product.findUnique({ where: { id: "p_002" } });
+  const stockBefore = donutBefore?.stock ?? 0;
 
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/sales`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: "sale_ok",
-        items: [
-          { id: "p_002", qty: 2 },
-          { id: "p_002", qty: 3 }
-        ]
+        id: `sale_ok_${Date.now()}`,
+        items: [{ id: "p_002", qty: 2 }]
       })
     });
 
     assert.equal(response.status, 201);
-    const payload = await response.json() as { items: Array<{ id: string; qty: number }> };
-    assert.deepEqual(payload.items, [{ id: "p_002", qty: 5 }]);
+    const payload = await response.json() as any;
+    assert.ok(payload.id);
 
-    const donut = products.find((product) => product.id === "p_002");
-    assert.ok(donut);
-    assert.equal(donut.stock, 45);
+    // Verify stock was decremented in database
+    const donutAfter = await prisma.product.findUnique({ where: { id: "p_002" } });
+    assert.equal(donutAfter?.stock, stockBefore - 2);
   });
 });

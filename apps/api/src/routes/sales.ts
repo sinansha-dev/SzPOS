@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { products, sales } from "../services/store.js";
+import { prisma } from "../services/store.js";
 
 type SaleItem = { id: string; qty: number };
 
@@ -19,53 +19,84 @@ function parseItems(raw: unknown): SaleItem[] {
 
 export const salesRouter = Router();
 
-salesRouter.post("/", (req, res) => {
-  const body = req.body as Record<string, unknown>;
-  const items = parseItems(body.items);
+salesRouter.post("/", async (req, res) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const items = parseItems(body.items);
 
-  if (items.length === 0) {
-    return res.status(400).json({ error: "Sale must include at least one valid item" });
-  }
-
-  const stockErrors = items
-    .map((item) => {
-      const product = products.find((productRow) => productRow.id === item.id);
-      if (!product) {
-        return `Product ${item.id} not found`;
-      }
-      if (item.qty > product.stock) {
-        return `${product.name} has only ${product.stock} in stock`;
-      }
-      return null;
-    })
-    .filter((errorText): errorText is string => Boolean(errorText));
-
-  if (stockErrors.length > 0) {
-    return res.status(409).json({ error: "Insufficient stock", details: stockErrors });
-  }
-
-  for (const item of items) {
-    const product = products.find((productRow) => productRow.id === item.id);
-    if (product) {
-      product.stock -= item.qty;
+    if (items.length === 0) {
+      return res.status(400).json({ error: "Sale must include at least one valid item" });
     }
+
+    // Check stock for all items
+    const stockErrors: string[] = [];
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.id } });
+      if (!product) {
+        stockErrors.push(`Product ${item.id} not found`);
+      } else if (item.qty > product.stock) {
+        stockErrors.push(`${product.name} has only ${product.stock} in stock`);
+      }
+    }
+
+    if (stockErrors.length > 0) {
+      return res.status(409).json({ error: "Insufficient stock", details: stockErrors });
+    }
+
+    // Update stock for all items
+    for (const item of items) {
+      await prisma.product.update({
+        where: { id: item.id },
+        data: { stock: { decrement: item.qty } }
+      });
+    }
+
+    // Create sale record
+    const saleData = {
+      id: String(body.id ?? `sale_${Date.now()}`),
+      payload: {
+        ...body,
+        items,
+        stockUpdatedAt: new Date().toISOString()
+      }
+    };
+
+    const sale = await prisma.sale.create({
+      data: saleData
+    });
+
+    return res.status(201).json(sale);
+  } catch (error) {
+    console.error("Sale creation error:", error);
+    return res.status(500).json({ error: "Failed to create sale" });
   }
-
-  const id = String(body.id ?? `sale_${Date.now()}`);
-  sales[id] = {
-    ...body,
-    id,
-    stockUpdatedAt: new Date().toISOString()
-  };
-
-  return res.status(201).json(sales[id]);
 });
 
-salesRouter.get("/:id", (req, res) => {
-  const sale = sales[req.params.id];
-  if (!sale) {
-    return res.status(404).json({ error: "sale not found" });
-  }
+salesRouter.get("/:id", async (req, res) => {
+  try {
+    const sale = await prisma.sale.findUnique({
+      where: { id: req.params.id }
+    });
 
-  return res.json(sale);
+    if (!sale) {
+      return res.status(404).json({ error: "Sale not found" });
+    }
+
+    return res.json(sale);
+  } catch (error) {
+    console.error("Sale fetch error:", error);
+    return res.status(500).json({ error: "Failed to fetch sale" });
+  }
+});
+
+salesRouter.get("/", async (req, res) => {
+  try {
+    const sales = await prisma.sale.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json(sales);
+  } catch (error) {
+    console.error("Sales fetch error:", error);
+    return res.status(500).json({ error: "Failed to fetch sales" });
+  }
 });
