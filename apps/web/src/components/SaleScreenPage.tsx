@@ -1,11 +1,27 @@
 import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "./PageLayout";
 import { apiClient } from "../api/client";
 import { Printer, AlertCircle } from "lucide-react";
 
-type Product = { id: string; name: string; price: number; taxRate: number };
+type Product = { id: string; name: string; price: number; taxRate: number; stock: number };
 type CartLine = Product & { qty: number };
+
+function normalizeProducts(raw: unknown): Product[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .map((row) => row as Partial<Product>)
+    .filter((row) => typeof row.id === "string" && typeof row.name === "string")
+    .map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      price: Number(row.price ?? 0),
+      taxRate: Number(row.taxRate ?? 0),
+      stock: Number(row.stock ?? 0)
+    }));
+}
 
 export function SaleScreenPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,7 +30,8 @@ export function SaleScreenPage() {
   const [status, setStatus] = useState("Ready");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: "CASH" | "UPI" | "CARD"; timestamp: string } | null>(null);
 
   useEffect(() => {
     loadProducts();
@@ -22,17 +39,33 @@ export function SaleScreenPage() {
 
   const loadProducts = async () => {
     try {
+      setBackendStatus("checking");
       const data = await apiClient.getProducts();
-      setProducts(data || []);
+      setProducts(normalizeProducts(data));
+      setBackendStatus("online");
       setLoading(false);
     } catch (err) {
       setError("Failed to load products");
+      setBackendStatus("offline");
       setLoading(false);
     }
   };
 
+  const checkBackend = async () => {
+    try {
+      setBackendStatus("checking");
+      await apiClient.getProducts();
+      setBackendStatus("online");
+      setStatus("Backend connected ✓");
+      setTimeout(() => setStatus("Ready"), 2000);
+    } catch {
+      setBackendStatus("offline");
+      setStatus("Backend offline");
+    }
+  };
+
   const filtered = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
+    () => products.filter((p) => String(p.name).toLowerCase().includes(query.toLowerCase())),
     [query, products]
   );
 
@@ -44,8 +77,19 @@ export function SaleScreenPage() {
     setCart((old) => {
       const found = old.find((line) => line.id === product.id);
       if (found) {
+        if (found.qty >= product.stock) {
+          setStatus(`Only ${product.stock} in stock`);
+          return old;
+        }
+
         return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
       }
+
+      if (product.stock <= 0) {
+        setStatus(`${product.name} is out of stock`);
+        return old;
+      }
+
       return [...old, { ...product, qty: 1 }];
     });
   }
@@ -53,31 +97,67 @@ export function SaleScreenPage() {
   function changeQty(id: string, delta: number) {
     setCart((old) =>
       old
-        .map((line) => (line.id === id ? { ...line, qty: Math.max(0, line.qty + delta) } : line))
+        .map((line) => {
+          if (line.id !== id) {
+            return line;
+          }
+
+          const maxQty = Math.max(0, line.stock);
+          const nextQty = Math.min(maxQty, Math.max(0, line.qty + delta));
+          if (delta > 0 && line.qty >= maxQty) {
+            setStatus(`Only ${maxQty} in stock`);
+          }
+
+          return { ...line, qty: nextQty };
+        })
         .filter((line) => line.qty > 0)
     );
   }
 
   async function completeSale(paymentMethod: "CASH" | "UPI" | "CARD") {
+    if (cart.length === 0) {
+      return;
+    }
+
+    const snapshot = cart.map((line) => ({ ...line }));
+    const receiptTime = new Date().toISOString();
     const payload = {
       id: `sale_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      items: cart,
+      timestamp: receiptTime,
+      items: snapshot,
       subtotal,
       taxTotal: tax,
       total,
       payment: { method: paymentMethod, amount: total },
-      printStatus: "not_printed"
+      printStatus: "printed"
     };
 
     try {
       await apiClient.createSale(payload);
+      setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
       setCart([]);
-      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
-      setTimeout(() => setStatus("Ready"), 3000);
+      const soldQtyById = snapshot.reduce<Record<string, number>>((acc, line) => {
+        acc[line.id] = (acc[line.id] ?? 0) + line.qty;
+        return acc;
+      }, {});
+
+      setProducts((current) =>
+        current.map((product) => ({
+          ...product,
+          stock: Math.max(0, product.stock - (soldQtyById[product.id] ?? 0))
+        }))
+      );
+
+      // Sync local screen with server-authoritative stock values.
+      await loadProducts();
+
+      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓. Click Print Receipt`);
       setError("");
+      setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
-      setError("Failed to save sale");
+      const message = err instanceof Error ? err.message : "Failed to save sale";
+      setError(message);
+      setStatus("Sale failed");
       console.error(err);
     }
   }
@@ -128,12 +208,15 @@ export function SaleScreenPage() {
                   key={product.id}
                   className="product-btn"
                   onClick={() => addProduct(product)}
+                  disabled={product.stock <= 0}
                 >
                   <div className="product-name">{product.name}</div>
                   <div className="product-price">₹{product.price}</div>
+                  <div className="product-stock">Stock: {product.stock}</div>
                 </button>
               ))}
             </div>
+            {filtered.length === 0 && <p className="empty-cart">No products available</p>}
           </div>
 
           {/* Cart Panel */}
@@ -207,13 +290,48 @@ export function SaleScreenPage() {
               🔄 Sync
             </button>
 
-            <button onClick={() => window.print()} className="print-btn">
+            <button onClick={checkBackend} className="sync-btn">
+              {backendStatus === "checking" ? "⏳ Checking Backend..." : backendStatus === "online" ? "🟢 Backend Online" : "🔴 Backend Offline"}
+            </button>
+
+            <button onClick={() => {
+              if (!lastReceipt) {
+                setStatus("Complete a sale first to print receipt");
+                return;
+              }
+              window.print();
+            }} className="print-btn">
               <Printer size={18} />
               Print Receipt
             </button>
 
             <div className="status-message">{status}</div>
           </div>
+        </div>
+
+        <div className="receipt-print-only">
+          <h2>SzPOS Receipt</h2>
+          <p>{lastReceipt ? new Date(lastReceipt.timestamp).toLocaleString() : new Date().toLocaleString()}</p>
+          <hr />
+          {!lastReceipt ? (
+            <p>No receipt generated yet</p>
+          ) : (
+            <>
+              <p>Paid by: {lastReceipt.paidBy}</p>
+              {lastReceipt.items.map((line) => (
+                <div key={line.id} className="receipt-line">
+                  <span>{line.name} × {line.qty}</span>
+                  <span>₹{(line.price * line.qty).toFixed(2)}</span>
+                </div>
+              ))}
+              <hr />
+              <div className="receipt-line">
+                <strong>Total</strong>
+                <strong>₹{lastReceipt.total.toFixed(2)}</strong>
+              </div>
+            </>
+          )}
+          <p className="receipt-footer">Thank you for shopping!</p>
         </div>
       </div>
     </PageLayout>

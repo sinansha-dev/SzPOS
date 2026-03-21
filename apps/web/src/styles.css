@@ -686,6 +686,24 @@ body {
   font-size: 14px;
 }
 
+
+.product-stock {
+  color: var(--text-light);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.product-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.product-btn:disabled:hover {
+  background: var(--lighter);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
 .cart-items {
   flex: 1;
   overflow-y: auto;
@@ -1052,4 +1070,64 @@ body {
 
 [data-theme="dark"] .logout-btn:hover {
   background: #3f1d1d;
+}
+
+
+[data-theme="dark"] .sales-panel,
+[data-theme="dark"] .qty-controls,
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .sync-btn,
+[data-theme="dark"] .print-btn,
+[data-theme="dark"] .status-message {
+  background: #1f2937;
+  color: var(--text);
+}
+
+[data-theme="dark"] .product-btn,
+[data-theme="dark"] .cart-item {
+  background: #111827;
+}
+
+[data-theme="dark"] .sync-btn:hover,
+[data-theme="dark"] .print-btn:hover,
+[data-theme="dark"] .product-btn:hover {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .product-stock {
+  color: #cbd5e1;
+}
+
+/* Print only receipt section */
+.receipt-print-only {
+  display: none;
+}
+
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.receipt-footer {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media print {
+  .page-layout {
+    display: none !important;
+  }
+
+  .receipt-print-only {
+    display: block;
+    width: 80mm;
+    padding: 8px;
+    background: #fff;
+    color: #000;
+    font-size: 12px;
+    font-family: "Courier New", monospace;
+  }
 }
