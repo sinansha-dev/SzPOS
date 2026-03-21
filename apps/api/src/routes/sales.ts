@@ -11,28 +11,17 @@ function parseItems(raw: unknown): SaleItem[] {
   return raw
     .map((item) => item as Record<string, unknown>)
     .map((item) => ({
-      id: String(item.id ?? "").trim(),
+      id: String(item.id ?? ""),
       qty: Number(item.qty ?? 0)
     }))
-    .filter((item) => item.id.length > 0 && Number.isInteger(item.qty) && item.qty > 0);
-}
-
-function normalizeItems(items: SaleItem[]): SaleItem[] {
-  const aggregated = new Map<string, number>();
-
-  for (const item of items) {
-    aggregated.set(item.id, (aggregated.get(item.id) ?? 0) + item.qty);
-  }
-
-  return [...aggregated.entries()].map(([id, qty]) => ({ id, qty }));
+    .filter((item) => item.id && Number.isFinite(item.qty) && item.qty > 0);
 }
 
 export const salesRouter = Router();
 
 salesRouter.post("/", (req, res) => {
   const body = req.body as Record<string, unknown>;
-  const parsedItems = parseItems(body.items);
-  const items = normalizeItems(parsedItems);
+  const items = parseItems(body.items);
 
   if (items.length === 0) {
     return res.status(400).json({ error: "Sale must include at least one valid item" });
@@ -66,7 +55,6 @@ salesRouter.post("/", (req, res) => {
   sales[id] = {
     ...body,
     id,
-    items,
     stockUpdatedAt: new Date().toISOString()
   };
 

@@ -1094,10 +1094,6 @@ body {
   background: #0f172a;
 }
 
-[data-theme="dark"] .product-stock {
-  color: #cbd5e1;
-}
-
 /* Print only receipt section */
 .receipt-print-only {
   display: none;
