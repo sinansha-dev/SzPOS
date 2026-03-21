@@ -12,5 +12,9 @@
     "dev": "echo 'Run web and api in separate terminals: npm run dev:web / npm run dev:api'",
     "build": "npm --workspace @szpos/web run build && npm --workspace @szpos/api run build",
     "check": "npm --workspace @szpos/api run typecheck && npm --workspace @szpos/web run typecheck"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
+    "pg": "^8.20.0"
   }
 }

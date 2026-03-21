@@ -1,5 +1,7 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import { initializeDatabase } from "./services/store.js";
 import { authRouter } from "./routes/auth.js";
 import { inventoryRouter } from "./routes/inventory.js";
 import { productsRouter } from "./routes/products.js";
@@ -26,6 +28,20 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
-});
+// Start server and initialize database
+async function start() {
+  try {
+    // Initialize database (seed if empty)
+    await initializeDatabase();
+    console.log("✅ Database ready");
+  } catch (error) {
+    console.warn("⚠️  Database initialization warning:", error instanceof Error ? error.message : error);
+    console.log("ℹ️  Continuing with in-memory storage fallback");
+  }
+
+  app.listen(port, () => {
+    console.log(`🚀 API listening on http://localhost:${port}`);
+  });
+}
+
+start();

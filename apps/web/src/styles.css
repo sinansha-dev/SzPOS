@@ -1060,11 +1060,19 @@ body {
   --text-light: #9ca3af;
 }
 
+/* Dark mode cards and containers */
 [data-theme="dark"] .dashboard-nav,
 [data-theme="dark"] .feature-card,
 [data-theme="dark"] .login-card,
 [data-theme="dark"] .form-card,
-[data-theme="dark"] table {
+[data-theme="dark"] table,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .report-table,
+[data-theme="dark"] .inventory-table,
+[data-theme="dark"] .users-table,
+[data-theme="dark"] .reports-section,
+[data-theme="dark"] .settings-container,
+[data-theme="dark"] .sales-panel {
   background: #1f2937;
 }
 
@@ -1072,15 +1080,23 @@ body {
   background: #3f1d1d;
 }
 
+/* Dark mode stat icon - adjust opacity for dark theme */
+[data-theme="dark"] .stat-icon {
+  background: rgba(59, 130, 246, 0.2);
+}
 
+/* Dark mode form elements */
 [data-theme="dark"] .sales-panel,
 [data-theme="dark"] .qty-controls,
 [data-theme="dark"] .search-input,
 [data-theme="dark"] .sync-btn,
 [data-theme="dark"] .print-btn,
-[data-theme="dark"] .status-message {
+[data-theme="dark"] .status-message,
+[data-theme="dark"] .settings-form input,
+[data-theme="dark"] .settings-form select {
   background: #1f2937;
   color: var(--text);
+  border-color: #374151;
 }
 
 [data-theme="dark"] .product-btn,
@@ -1092,6 +1108,14 @@ body {
 [data-theme="dark"] .print-btn:hover,
 [data-theme="dark"] .product-btn:hover {
   background: #0f172a;
+}
+
+/* Dark mode table styling */
+[data-theme="dark"] .report-table thead,
+[data-theme="dark"] .inventory-table thead,
+[data-theme="dark"] .users-table thead {
+  background: #111827;
+  border-bottom-color: #374151;
 }
 
 /* Print only receipt section */

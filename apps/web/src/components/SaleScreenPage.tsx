@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageLayout } from "./PageLayout";
 import { apiClient } from "../api/client";
 import { Printer, AlertCircle } from "lucide-react";
@@ -31,6 +32,8 @@ export function SaleScreenPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
+  const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: string; timestamp: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,6 +84,10 @@ export function SaleScreenPage() {
   const subtotal = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
   const tax = cart.reduce((sum, line) => sum + line.qty * line.price * line.taxRate, 0);
   const total = subtotal + tax;
+
+  const receiptItems = lastReceipt?.items ?? cart;
+  const receiptTotal = lastReceipt?.total ?? total;
+  const receiptTimestamp = lastReceipt?.timestamp ?? new Date().toLocaleString();
 
   function addProduct(product: Product) {
     setCart((old) => {
@@ -144,6 +151,7 @@ export function SaleScreenPage() {
     try {
       await apiClient.createSale(payload);
       setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
+      setShouldAutoPrint(true);
       setCart([]);
       setProducts((current) =>
         current.map((product) => {
@@ -160,7 +168,6 @@ export function SaleScreenPage() {
       );
       setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
       setError("");
-      setTimeout(() => window.print(), 150);
       setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save sale";
@@ -313,13 +320,13 @@ export function SaleScreenPage() {
 
         <div className="receipt-print-only">
           <h2>SzPOS Receipt</h2>
-          <p>{new Date().toLocaleString()}</p>
+          <p>{receiptTimestamp}</p>
           <hr />
-          {cart.length === 0 ? (
+          {receiptItems.length === 0 ? (
             <p>No items in cart</p>
           ) : (
             <>
-              {cart.map((line) => (
+              {receiptItems.map((line) => (
                 <div key={line.id} className="receipt-line">
                   <span>{line.name} × {line.qty}</span>
                   <span>₹{(line.price * line.qty).toFixed(2)}</span>
@@ -328,7 +335,7 @@ export function SaleScreenPage() {
               <hr />
               <div className="receipt-line">
                 <strong>Total</strong>
-                <strong>₹{total.toFixed(2)}</strong>
+                <strong>₹{receiptTotal.toFixed(2)}</strong>
               </div>
             </>
           )}
