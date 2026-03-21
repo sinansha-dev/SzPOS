@@ -6,6 +6,23 @@ import { Printer, AlertCircle } from "lucide-react";
 type Product = { id: string; name: string; price: number; taxRate: number; stock: number };
 type CartLine = Product & { qty: number };
 
+function normalizeProducts(raw: unknown): Product[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .map((row) => row as Partial<Product>)
+    .filter((row) => typeof row.id === "string" && typeof row.name === "string")
+    .map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      price: Number(row.price ?? 0),
+      taxRate: Number(row.taxRate ?? 0),
+      stock: Number(row.stock ?? 0)
+    }));
+}
+
 export function SaleScreenPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState("");
@@ -57,7 +74,7 @@ export function SaleScreenPage() {
   };
 
   const filtered = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
+    () => products.filter((p) => String(p.name).toLowerCase().includes(query.toLowerCase())),
     [query, products]
   );
 
@@ -207,6 +224,7 @@ export function SaleScreenPage() {
                 </button>
               ))}
             </div>
+            {filtered.length === 0 && <p className="empty-cart">No products available</p>}
           </div>
 
           {/* Cart Panel */}
