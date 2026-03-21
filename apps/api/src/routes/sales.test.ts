@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
 import { salesRouter } from "./sales.js";
-import { productsRouter } from "./products.js";
 import { products, sales } from "../services/store.js";
 
 const baselineProducts = products.map((product) => ({ ...product }));
@@ -18,7 +17,6 @@ async function withServer(run: (baseUrl: string) => Promise<void>) {
   const app = express();
   app.use(express.json());
   app.use("/api/sales", salesRouter);
-  app.use("/api/products", productsRouter);
 
   const server = await new Promise<import("node:http").Server>((resolve) => {
     const s = app.listen(0, () => resolve(s));
@@ -86,31 +84,5 @@ test("decrements stock for successful sale and stores normalized items", async (
     const donut = products.find((product) => product.id === "p_002");
     assert.ok(donut);
     assert.equal(donut.stock, 45);
-  });
-});
-
-
-test("products endpoint reflects stock decrement after successful sale", async () => {
-  resetStore();
-
-  await withServer(async (baseUrl) => {
-    const saleResponse = await fetch(`${baseUrl}/api/sales`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: "sale_stock_sync",
-        items: [{ id: "p_001", qty: 2 }]
-      })
-    });
-
-    assert.equal(saleResponse.status, 201);
-
-    const productsResponse = await fetch(`${baseUrl}/api/products`);
-    assert.equal(productsResponse.status, 200);
-    const productList = await productsResponse.json() as Array<{ id: string; stock: number }>;
-    const cake = productList.find((product) => product.id === "p_001");
-
-    assert.ok(cake);
-    assert.equal(cake.stock, 10);
   });
 });

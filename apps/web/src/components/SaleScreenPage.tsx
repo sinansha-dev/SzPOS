@@ -31,17 +31,26 @@ export function SaleScreenPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
-  const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: "CASH" | "UPI" | "CARD"; timestamp: string } | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    if (!shouldAutoPrint || !lastReceipt) {
+      return;
+    }
+
+    window.print();
+    setShouldAutoPrint(false);
+  }, [shouldAutoPrint, lastReceipt]);
+
   const loadProducts = async () => {
     try {
       setBackendStatus("checking");
       const data = await apiClient.getProducts();
-      setProducts(normalizeProducts(data));
+      setProducts(data || []);
       setBackendStatus("online");
       setLoading(false);
     } catch (err) {
@@ -136,23 +145,22 @@ export function SaleScreenPage() {
       await apiClient.createSale(payload);
       setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
       setCart([]);
-      const soldQtyById = snapshot.reduce<Record<string, number>>((acc, line) => {
-        acc[line.id] = (acc[line.id] ?? 0) + line.qty;
-        return acc;
-      }, {});
-
       setProducts((current) =>
-        current.map((product) => ({
-          ...product,
-          stock: Math.max(0, product.stock - (soldQtyById[product.id] ?? 0))
-        }))
+        current.map((product) => {
+          const soldLine = snapshot.find((line) => line.id === product.id);
+          if (!soldLine) {
+            return product;
+          }
+
+          return {
+            ...product,
+            stock: Math.max(0, product.stock - soldLine.qty)
+          };
+        })
       );
-
-      // Sync local screen with server-authoritative stock values.
-      await loadProducts();
-
-      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓. Click Print Receipt`);
+      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
       setError("");
+      setTimeout(() => window.print(), 150);
       setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save sale";
@@ -294,13 +302,7 @@ export function SaleScreenPage() {
               {backendStatus === "checking" ? "⏳ Checking Backend..." : backendStatus === "online" ? "🟢 Backend Online" : "🔴 Backend Offline"}
             </button>
 
-            <button onClick={() => {
-              if (!lastReceipt) {
-                setStatus("Complete a sale first to print receipt");
-                return;
-              }
-              window.print();
-            }} className="print-btn">
+            <button onClick={() => window.print()} className="print-btn">
               <Printer size={18} />
               Print Receipt
             </button>
@@ -311,14 +313,13 @@ export function SaleScreenPage() {
 
         <div className="receipt-print-only">
           <h2>SzPOS Receipt</h2>
-          <p>{lastReceipt ? new Date(lastReceipt.timestamp).toLocaleString() : new Date().toLocaleString()}</p>
+          <p>{new Date().toLocaleString()}</p>
           <hr />
-          {!lastReceipt ? (
-            <p>No receipt generated yet</p>
+          {cart.length === 0 ? (
+            <p>No items in cart</p>
           ) : (
             <>
-              <p>Paid by: {lastReceipt.paidBy}</p>
-              {lastReceipt.items.map((line) => (
+              {cart.map((line) => (
                 <div key={line.id} className="receipt-line">
                   <span>{line.name} × {line.qty}</span>
                   <span>₹{(line.price * line.qty).toFixed(2)}</span>
@@ -327,7 +328,7 @@ export function SaleScreenPage() {
               <hr />
               <div className="receipt-line">
                 <strong>Total</strong>
-                <strong>₹{lastReceipt.total.toFixed(2)}</strong>
+                <strong>₹{total.toFixed(2)}</strong>
               </div>
             </>
           )}

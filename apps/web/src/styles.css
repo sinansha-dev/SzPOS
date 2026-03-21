@@ -1094,10 +1094,6 @@ body {
   background: #0f172a;
 }
 
-[data-theme="dark"] .product-stock {
-  color: #cbd5e1;
-}
-
 /* Print only receipt section */
 .receipt-print-only {
   display: none;
@@ -1117,12 +1113,20 @@ body {
 }
 
 @media print {
-  .page-layout {
-    display: none !important;
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print-only,
+  .receipt-print-only * {
+    visibility: visible;
   }
 
   .receipt-print-only {
     display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 80mm;
     padding: 8px;
     background: #fff;
