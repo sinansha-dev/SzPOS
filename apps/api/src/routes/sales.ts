@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../services/store.js";
+import { printReceipt } from "../services/thermalPrinter.js";
+import { getISTTimestamp, getISTDate } from "../utils/timezone.js";
 
-type SaleItem = { id: string; qty: number };
+type SaleItem = { id: string; qty: number; name?: string; price?: number; taxRate?: number };
 
 function parseItems(raw: unknown): SaleItem[] {
   if (!Array.isArray(raw)) {
@@ -12,7 +14,10 @@ function parseItems(raw: unknown): SaleItem[] {
     .map((item) => item as Record<string, unknown>)
     .map((item) => ({
       id: String(item.id ?? ""),
-      qty: Number(item.qty ?? 0)
+      qty: Number(item.qty ?? 0),
+      name: String(item.name ?? ""),
+      price: Number(item.price ?? 0),
+      taxRate: Number(item.taxRate ?? 0)
     }))
     .filter((item) => item.id && Number.isFinite(item.qty) && item.qty > 0);
 }
@@ -51,19 +56,31 @@ salesRouter.post("/", async (req, res) => {
       });
     }
 
-    // Create sale record
+    // Create sale record with IST timestamp
+    const istTimestamp = getISTTimestamp();
+    
     const saleData = {
       id: String(body.id ?? `sale_${Date.now()}`),
+      createdAt: getISTDate(), // Store current moment in DB
       payload: {
         ...body,
         items,
-        stockUpdatedAt: new Date().toISOString()
+        timestamp: istTimestamp, // IST display string in payload
+        stockUpdatedAt: istTimestamp
       }
     };
 
     const sale = await prisma.sale.create({
       data: saleData
     });
+
+    // Auto-print receipt (no dialog, direct to thermal printer)
+    if (body.autoPrint !== false) {
+      // Run print in background, don't wait
+      printReceipt(sale.payload).catch((err) =>
+        console.error("Background print error:", err instanceof Error ? err.message : err)
+      );
+    }
 
     return res.status(201).json(sale);
   } catch (error) {

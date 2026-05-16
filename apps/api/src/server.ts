@@ -2,11 +2,13 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import { initializeDatabase } from "./services/store.js";
+import { initializePrinter } from "./services/thermalPrinter.js";
 import { authRouter } from "./routes/auth.js";
 import { inventoryRouter } from "./routes/inventory.js";
 import { productsRouter } from "./routes/products.js";
 import { salesRouter } from "./routes/sales.js";
 import { reportsRouter } from "./routes/reports.js";
+import { printingRouter } from "./routes/printing.js";
 import { syncRouter } from "./routes/sync.js";
 import { usersRouter } from "./routes/users.js";
 
@@ -21,6 +23,7 @@ app.use("/api/products", productsRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/printing", printingRouter);
 app.use("/api/sync", syncRouter);
 app.use("/api/users", usersRouter);
 
@@ -37,6 +40,14 @@ async function start() {
   } catch (error) {
     console.warn("⚠️  Database initialization warning:", error instanceof Error ? error.message : error);
     console.log("ℹ️  Continuing with in-memory storage fallback");
+  }
+
+  try {
+    // Initialize thermal printer
+    await initializePrinter();
+  } catch (error) {
+    console.warn("⚠️  Thermal printer initialization warning:", error instanceof Error ? error.message : error);
+    console.log("ℹ️  Printer will be unavailable but app will continue");
   }
 
   app.listen(port, () => {

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getISTTimestamp } from "../utils/timezone.js";
 
 export const syncRouter = Router();
 
@@ -7,7 +8,7 @@ syncRouter.post("/", (req, res) => {
 
   return res.json({
     received: changes.length,
-    serverTime: new Date().toISOString(),
+    serverTime: getISTTimestamp(),
     conflicts: []
   });
 });

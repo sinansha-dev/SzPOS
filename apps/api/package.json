@@ -18,7 +18,8 @@
     "@prisma/adapter-pg": "^7.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "node-thermal-printer": "^4.6.0"
   },
   "devDependencies": {
     "@prisma/client": "^7.5.0",

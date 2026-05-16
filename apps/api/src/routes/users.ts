@@ -52,7 +52,7 @@ usersRouter.put("/:id", async (req, res) => {
 
     return res.json(updated);
   } catch (error) {
-    if (error.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2025') {
       return res.status(404).json({ error: "User not found" });
     }
     console.error("Error updating user:", error);
@@ -68,7 +68,7 @@ usersRouter.delete("/:id", async (req, res) => {
 
     return res.json(deleted);
   } catch (error) {
-    if (error.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2025') {
       return res.status(404).json({ error: "User not found" });
     }
     console.error("Error deleting user:", error);

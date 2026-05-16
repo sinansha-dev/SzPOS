@@ -96,6 +96,12 @@ export const apiClient = {
     return res.json();
   },
 
+  async getItemWiseAnalytics() {
+    const res = await fetch(`${API_BASE}/reports/item-wise-analytics`);
+    if (!res.ok) throw new Error("Failed to fetch item-wise analytics");
+    return res.json();
+  },
+
   // Inventory
   async getInventory() {
     const res = await fetch(`${API_BASE}/inventory`);

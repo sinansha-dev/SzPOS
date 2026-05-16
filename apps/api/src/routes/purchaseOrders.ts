@@ -1,16 +1,19 @@
 import { Router } from "express";
 import { prisma } from "../services/store.js";
+import { getISTTimestamp, getISTDate } from "../utils/timezone.js";
 
 export const purchaseOrdersRouter = Router();
 
 purchaseOrdersRouter.post("/", async (req, res) => {
   try {
     const id = `po_${Date.now()}`;
-    const payload = { id, ...req.body, status: req.body?.status ?? "created" };
+    const istTimestamp = getISTTimestamp();
+    const payload = { id, ...req.body, status: req.body?.status ?? "created", timestamp: istTimestamp };
 
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
         id,
+        createdAt: getISTDate(), // Store current moment in DB
         payload
       }
     });

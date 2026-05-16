@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode } from "react";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
 interface User {
   id: string;
@@ -15,9 +15,25 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_STORAGE_KEY = "szpos_auth_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Restore auth state from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error("Failed to restore auth state:", err);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    }
+    setIsInitialized(true);
+  }, []);
 
   const login = async (username: string, password: string) => {
     // Simple mock authentication
@@ -30,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: username.charAt(0).toUpperCase() + username.slice(1)
       };
       setUser(mockUser);
+      // Persist to localStorage
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
     } else {
       throw new Error("Invalid credentials");
     }
@@ -37,7 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   };
+
+  // Don't render children until we've restored auth state
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>

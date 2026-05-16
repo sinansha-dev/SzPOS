@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PageLayout } from "./PageLayout";
-import { Save } from "lucide-react";
+import { Save, AlertCircle } from "lucide-react";
+import { apiClient } from "../api/client";
 
 export function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -12,6 +13,8 @@ export function SettingsPage() {
     taxRate: "18"
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
@@ -20,6 +23,26 @@ export function SettingsPage() {
   const handleSave = () => {
     console.log("Settings saved:", settings);
     alert("Settings saved successfully!");
+  };
+
+  const handleResetPOS = async () => {
+    const password = prompt("Enter reset password to confirm POS reset:");
+    if (!password) return;
+
+    if (!confirm("⚠️ This will clear all sales, returns, and reset inventory.\nContinue?")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post("/auth/reset-pos", { password });
+      alert("✅ POS reset successfully!\n\n" + JSON.stringify(response.resetData, null, 2));
+      window.location.reload();
+    } catch (error: any) {
+      alert("❌ Reset failed: " + (error.response?.data?.error || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -99,6 +122,39 @@ export function SettingsPage() {
           <button onClick={handleSave} className="btn-primary save-btn">
             <Save size={20} />
             Save Settings
+          </button>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="danger-zone">
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #e5e7eb" }}>
+            <AlertCircle size={20} style={{ color: "#ef4444" }} />
+            <h3 style={{ margin: 0, color: "#ef4444" }}>Danger Zone</h3>
+          </div>
+          
+          <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "15px" }}>
+            Reset all POS data including sales, returns, and inventory. This action cannot be undone.
+          </p>
+
+          <button 
+            onClick={handleResetPOS}
+            disabled={loading}
+            className="btn-danger"
+            style={{
+              backgroundColor: "#ef4444",
+              color: "white",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: "6px",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+          >
+            <AlertCircle size={18} />
+            {loading ? "Resetting..." : "Reset POS"}
           </button>
         </div>
       </div>

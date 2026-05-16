@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../services/store.js";
+import { getISTDateString } from "../utils/timezone.js";
 
 export const reportsRouter = Router();
 
@@ -32,7 +33,7 @@ reportsRouter.get("/", async (_req, res) => {
       totalTax: tax,
       transactionCount: list.length,
       byPaymentMethod: byMethod,
-      date: new Date().toISOString().slice(0, 10)
+      date: getISTDateString()
     });
   } catch (error) {
     console.error("Error generating reports:", error);
@@ -49,7 +50,7 @@ reportsRouter.get("/daily-sales", async (_req, res) => {
     const tax = list.reduce((sum, sale) => sum + Number(sale.taxTotal ?? 0), 0);
 
     res.json({
-      date: new Date().toISOString().slice(0, 10),
+      date: getISTDateString(),
       billCount: list.length,
       gross,
       tax,
@@ -58,5 +59,112 @@ reportsRouter.get("/daily-sales", async (_req, res) => {
   } catch (error) {
     console.error("Error generating daily sales report:", error);
     return res.status(500).json({ error: "Failed to generate daily sales report" });
+  }
+});
+
+// Item-wise analytics endpoint
+reportsRouter.get("/item-wise-analytics", async (_req, res) => {
+  try {
+    // Fetch all products and sales
+    const products = await prisma.product.findMany();
+    const sales = await prisma.sale.findMany();
+
+    // Create product map for quick lookup
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Aggregate sales by item
+    const itemAnalytics: Record<string, {
+      productId: string;
+      productName: string;
+      sku: string;
+      totalQuantitySold: number;
+      totalRevenue: number;
+      totalTax: number;
+      unitPrice: number;
+      taxRate: number;
+      averageUnitPrice: number;
+      profitMargin: number;
+      timesInTransaction: number;
+      lastSoldDate: string;
+    }> = {};
+
+    sales.forEach((sale) => {
+      const payload = sale.payload as Record<string, unknown>;
+      const items = (payload.items as unknown[]) ?? [];
+      const saleItems = items.map(item => item as Record<string, unknown>);
+      const saleDate = String(payload.timestamp ?? getISTDateString());
+
+      saleItems.forEach((saleItem) => {
+        const itemId = String(saleItem.id ?? "");
+        const itemQty = Number(saleItem.qty ?? 0);
+        const itemPrice = Number(saleItem.price ?? 0);
+        const itemTaxRate = Number(saleItem.taxRate ?? 0);
+        const itemName = String(saleItem.name ?? "").trim();
+
+        if (!itemId || !itemQty) return;
+
+        // Calculate tax for this item
+        const itemTaxAmount = itemPrice * itemQty * itemTaxRate;
+
+        if (!itemAnalytics[itemId]) {
+          const product = productMap.get(itemId);
+          // Use sale item name if available, otherwise fall back to product name from DB
+          const finalName = itemName && itemName.length > 0 
+            ? itemName 
+            : (product?.name ?? "Unknown");
+          
+          itemAnalytics[itemId] = {
+            productId: itemId,
+            productName: finalName,
+            sku: product?.sku ?? "N/A",
+            totalQuantitySold: 0,
+            totalRevenue: 0,
+            totalTax: 0,
+            unitPrice: itemPrice,
+            taxRate: itemTaxRate,
+            averageUnitPrice: itemPrice,
+            profitMargin: 0,
+            timesInTransaction: 0,
+            lastSoldDate: saleDate
+          };
+        }
+
+        itemAnalytics[itemId].totalQuantitySold += itemQty;
+        itemAnalytics[itemId].totalRevenue += itemPrice * itemQty;
+        itemAnalytics[itemId].totalTax += itemTaxAmount;
+        itemAnalytics[itemId].averageUnitPrice = itemAnalytics[itemId].totalRevenue / itemAnalytics[itemId].totalQuantitySold;
+        itemAnalytics[itemId].timesInTransaction += 1;
+        itemAnalytics[itemId].lastSoldDate = saleDate;
+      });
+    });
+
+    // Convert to array and sort by revenue
+    const analyticsArray = Object.values(itemAnalytics)
+      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    // Calculate summary statistics
+    const totalItemRevenue = analyticsArray.reduce((sum, item) => sum + item.totalRevenue, 0);
+    const totalItemsCount = analyticsArray.length;
+    const topSellingItem = analyticsArray[0];
+    const topSellingByQuantity = [...analyticsArray].sort((a, b) => b.totalQuantitySold - a.totalQuantitySold)[0];
+
+    res.json({
+      date: getISTDateString(),
+      summary: {
+        totalItemsInCatalog: products.length,
+        itemsWithSales: totalItemsCount,
+        totalItemRevenue,
+        totalItemsQuantitySold: analyticsArray.reduce((sum, item) => sum + item.totalQuantitySold, 0),
+        topSellingByRevenue: topSellingItem?.productName,
+        topSellingByQuantity: topSellingByQuantity?.productName
+      },
+      items: analyticsArray.map(item => ({
+        ...item,
+        profitMargin: item.unitPrice > 0 ? Math.round(((item.averageUnitPrice - item.unitPrice) / item.unitPrice) * 100) : 0
+      }))
+    });
+  } catch (error) {
+    console.error("Error generating item-wise analytics:", error);
+    return res.status(500).json({ error: "Failed to generate item-wise analytics" });
   }
 });

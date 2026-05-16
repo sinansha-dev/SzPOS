@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "./PageLayout";
 import { apiClient } from "../api/client";
+import { getISTTimestamp } from "../utils/timezone";
 import { Printer, AlertCircle } from "lucide-react";
 
 type Product = { id: string; name: string; price: number; taxRate: number; stock: number };
@@ -87,7 +88,8 @@ export function SaleScreenPage() {
 
   const receiptItems = lastReceipt?.items ?? cart;
   const receiptTotal = lastReceipt?.total ?? total;
-  const receiptTimestamp = lastReceipt?.timestamp ?? new Date().toLocaleString();
+  // Format IST timestamp for display (e.g., 2026-03-24T18:45:26+05:30)
+  const receiptTimestamp = lastReceipt?.timestamp ?? getISTTimestamp();
 
   function addProduct(product: Product) {
     setCart((old) => {
@@ -136,7 +138,7 @@ export function SaleScreenPage() {
     }
 
     const snapshot = cart.map((line) => ({ ...line }));
-    const receiptTime = new Date().toISOString();
+    const receiptTime = getISTTimestamp();
     const payload = {
       id: `sale_${Date.now()}`,
       timestamp: receiptTime,
@@ -319,27 +321,90 @@ export function SaleScreenPage() {
         </div>
 
         <div className="receipt-print-only">
-          <h2>SzPOS Receipt</h2>
-          <p>{receiptTimestamp}</p>
-          <hr />
-          {receiptItems.length === 0 ? (
-            <p>No items in cart</p>
-          ) : (
-            <>
-              {receiptItems.map((line) => (
-                <div key={line.id} className="receipt-line">
-                  <span>{line.name} × {line.qty}</span>
-                  <span>₹{(line.price * line.qty).toFixed(2)}</span>
+          <div style={{ maxWidth: "400px", margin: "0 auto", fontFamily: "monospace", fontSize: "12px" }}>
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: "8px" }}>
+              <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: "bold" }}>SZPOS</h2>
+              <p style={{ margin: "0", fontSize: "14px" }}>Receipt</p>
+              <p style={{ margin: "0", letterSpacing: "1px" }}>═══════════════════════════════</p>
+            </div>
+
+            {/* Receipt info */}
+            <div style={{ marginBottom: "12px", textAlign: "left" }}>
+              <div>Receipt #: {lastReceipt?.paidBy ? "TXN_" + Date.now() : "DRAFT"}</div>
+              <div>Date: {receiptTimestamp.substring(0, 10)}</div>
+              <div>Time: {receiptTimestamp.substring(11, 19)}</div>
+            </div>
+
+            {/* Items header */}
+            <div style={{ marginBottom: "8px", paddingBottom: "4px", borderBottom: "1px dashed #000" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", paddingBottom: "4px" }}>Item</th>
+                    <th style={{ textAlign: "center", paddingBottom: "4px" }}>Qty</th>
+                    <th style={{ textAlign: "right", paddingBottom: "4px" }}>Price</th>
+                    <th style={{ textAlign: "right", paddingBottom: "4px" }}>Total</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+
+            {/* Items */}
+            {receiptItems.length === 0 ? (
+              <p style={{ textAlign: "center", margin: "20px 0" }}>No items in cart</p>
+            ) : (
+              <>
+                <div style={{ marginBottom: "8px" }}>
+                  {receiptItems.map((line) => (
+                    <table key={line.id} style={{ width: "100%", borderCollapse: "collapse", marginBottom: "4px", fontSize: "11px" }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ textAlign: "left", width: "50%", wordBreak: "break-word" }}>
+                            <strong>{line.name}</strong>
+                          </td>
+                          <td style={{ textAlign: "center", width: "10%" }}>{line.qty}</td>
+                          <td style={{ textAlign: "right", width: "20%" }}>₹{line.price.toFixed(2)}</td>
+                          <td style={{ textAlign: "right", width: "20%" }}>₹{(line.price * line.qty).toFixed(2)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  ))}
                 </div>
-              ))}
-              <hr />
-              <div className="receipt-line">
-                <strong>Total</strong>
-                <strong>₹{receiptTotal.toFixed(2)}</strong>
-              </div>
-            </>
-          )}
-          <p className="receipt-footer">Thank you for shopping!</p>
+
+                {/* Separator */}
+                <div style={{ borderBottom: "1px dashed #000", margin: "8px 0" }}></div>
+
+                {/* Totals */}
+                <div style={{ marginBottom: "12px", fontSize: "11px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <span>Subtotal:</span>
+                    <span>₹{(receiptTotal * 0.95).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span>Tax/GST:</span>
+                    <span>₹{(receiptTotal * 0.05).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "bold", borderTopWidth: "2px", borderTopStyle: "double", paddingTop: "6px" }}>
+                    <span>TOTAL:</span>
+                    <span>₹{receiptTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Payment method */}
+                <div style={{ textAlign: "center", marginBottom: "12px", fontSize: "11px", borderTop: "1px solid #000", paddingTop: "8px" }}>
+                  <div>Payment: <strong>{lastReceipt?.paidBy || "CASH"}</strong></div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ textAlign: "center", fontSize: "10px", borderTop: "1px dashed #000", paddingTop: "8px" }}>
+                  <p style={{ margin: "4px 0" }}>Thank you for your purchase!</p>
+                  <p style={{ margin: "4px 0" }}>Please visit again!</p>
+                  <p style={{ margin: "4px 0", fontSize: "9px", color: "#666" }}>═══════════════════════════════</p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </PageLayout>
