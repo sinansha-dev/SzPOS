@@ -84,9 +84,9 @@ export function SaleScreenPage() {
     [query, products]
   );
 
-  const subtotal = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
-  const tax = cart.reduce((sum, line) => sum + line.qty * line.price * line.taxRate, 0);
-  const total = subtotal + tax;
+  const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
+  const subtotal = cart.reduce((sum, line) => sum + (line.qty * line.price) / (1 + line.taxRate), 0);
+  const tax = total - subtotal;
 
   const receiptItems = lastReceipt?.items ?? cart;
   const receiptTotal = lastReceipt?.total ?? total;
