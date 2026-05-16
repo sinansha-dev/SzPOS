@@ -9,11 +9,13 @@ type Product = { id: string; name: string; price: number; taxRate: number; stock
 type CartLine = Product & { qty: number };
 
 function normalizeProducts(raw: unknown): Product[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
+  const source = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as { products?: unknown }).products)
+      ? (raw as { products: unknown[] }).products
+      : [];
 
-  return raw
+  return source
     .map((row) => row as Partial<Product>)
     .filter((row) => typeof row.id === "string" && typeof row.name === "string")
     .map((row) => ({
@@ -54,7 +56,7 @@ export function SaleScreenPage() {
     try {
       setBackendStatus("checking");
       const data = await apiClient.getProducts();
-      setProducts(data || []);
+      setProducts(normalizeProducts(data));
       setBackendStatus("online");
       setLoading(false);
     } catch (err) {
