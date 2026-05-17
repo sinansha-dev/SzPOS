@@ -55,7 +55,7 @@ export function SettingsPage() {
 
     setLoading(true);
     try {
-      const response = await apiClient.post("/auth/reset-pos", { password });
+      const response = await apiClient.resetPOS(password);
       alert("✅ POS reset successfully!\n\n" + JSON.stringify(response.resetData, null, 2));
       window.location.reload();
     } catch (error: any) {
