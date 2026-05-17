@@ -1,14 +1,20 @@
-import { ThermalPrinter, PrinterTypes, CharacterSet } from "node-thermal-printer";
+import { ThermalPrinter, PrinterTypes } from "node-thermal-printer";
 
 let printer: ThermalPrinter | null = null;
+
+function resolvePrinterType() {
+  const t = (process.env.PRINTER_TYPE || "STAR").toUpperCase();
+  if (t === "EPSON") return PrinterTypes.EPSON;
+  if (t === "TANCA") return PrinterTypes.TANCA;
+  return PrinterTypes.STAR;
+}
 
 // Initialize thermal printer connection
 export async function initializePrinter() {
   try {
     const printerConfig: any = {
-      type: PrinterTypes.STAR, // Support STAR, EPSON, TANCA printers
+      type: resolvePrinterType(), // STAR/EPSON/TANCA via PRINTER_TYPE env
       interface: process.env.PRINTER_INTERFACE || "network", // usb, network, or serial
-      characterSet: CharacterSet.USA, // Common character set
       lineCharacter: "="
     };
 
@@ -56,7 +62,7 @@ export async function printReceipt(saleData: any) {
     // Sale info
     printer.alignLeft();
     printer.println(`Receipt #: ${saleData.id}`);
-    printer.println(`Date: ${new Date().toLocaleString()}`);
+    printer.println(`Date: ${saleData.timestamp || new Date().toLocaleString()}`);
     printer.newLine();
 
     // Items
@@ -65,8 +71,11 @@ export async function printReceipt(saleData: any) {
 
     if (Array.isArray(saleData.items)) {
       for (const item of saleData.items) {
-        printer.println(`Product ID: ${item.id}`);
-        printer.println(`Qty: ${item.qty}`);
+        const name = item.name || item.id;
+        const qty = Number(item.qty || 0);
+        const price = Number(item.price || 0);
+        printer.println(`${name}`);
+        printer.println(`  ${qty} x ${price.toFixed(2)} = ${(qty * price).toFixed(2)}`);
       }
     }
 

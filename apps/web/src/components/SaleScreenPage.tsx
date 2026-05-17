@@ -191,9 +191,17 @@ export function SaleScreenPage() {
     };
 
     try {
-      await apiClient.createSale(payload);
-      setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
-      setShouldAutoPrint(true);
+      const createdSale = await apiClient.createSale(payload);
+
+      let printMessage = "Receipt printed";
+      try {
+        const printResult = await apiClient.printSaleReceipt(createdSale.id);
+        if (printResult?.status === "queued") printMessage = "Printer offline - receipt queued";
+      } catch {
+        printMessage = "Thermal print failed - browser print used";
+        setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
+        setShouldAutoPrint(true);
+      }
       setCart([]);
       setProducts((current) =>
         current.map((product) => {
@@ -208,7 +216,7 @@ export function SaleScreenPage() {
           };
         })
       );
-      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
+      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓ | ${printMessage}`);
       setError("");
       setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
