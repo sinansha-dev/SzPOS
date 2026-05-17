@@ -109,6 +109,19 @@ export const apiClient = {
     return res.json();
   },
 
+  async resetPOS(password: string) {
+    const res = await fetch(`${API_BASE}/auth/reset-pos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error((payload as { error?: string }).error || "Failed to reset POS");
+    }
+    return res.json();
+  },
+
   async updateInventory(productId: string, quantity: number) {
     const res = await fetch(`${API_BASE}/inventory/${productId}`, {
       method: "PUT",
