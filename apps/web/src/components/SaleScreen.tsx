@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { enqueue } from "../data/localQueue";
 import { syncNow } from "../sync/syncEngine";
 import { getISTTimestamp } from "../utils/timezone";
@@ -15,12 +15,31 @@ const quickProducts: Product[] = [
 ];
 
 const RECEIPTS_KEY = "szpos.receipts";
+const SETTINGS_KEY = "szpos.settings";
+const DEFAULT_TAX_RATE = 0.18;
 
 export function SaleScreen() {
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [status, setStatus] = useState("Ready");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+
+
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      const configuredRate = Number(parsed.taxRate);
+      if (!Number.isNaN(configuredRate) && configuredRate >= 0) {
+        setTaxRate(configuredRate / 100);
+      }
+    } catch (error) {
+      console.error("Failed to load tax settings:", error);
+    }
+  }, []);
 
   const filtered = useMemo(
     () => quickProducts.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
@@ -28,16 +47,16 @@ export function SaleScreen() {
   );
 
   const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
-  const subtotal = cart.reduce((sum, line) => sum + (line.qty * line.price) / (1 + line.taxRate), 0);
+  const subtotal = taxRate > 0 ? total / (1 + taxRate) : total;
   const tax = total - subtotal;
 
   function addProduct(product: Product) {
     setCart((old) => {
       const found = old.find((line) => line.id === product.id);
       if (found) {
-        return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
+        return old.map((line) => (line.id === product.id ? { ...line, taxRate, qty: line.qty + 1 } : line));
       }
-      return [...old, { ...product, qty: 1 }];
+      return [...old, { ...product, taxRate, qty: 1 }];
     });
   }
 
@@ -162,7 +181,7 @@ export function SaleScreen() {
     const salePayload = {
       id: `sale_${Date.now()}`,
       timestamp: istTimestamp,
-      items: cart,
+      items: cart.map((line) => ({ ...line, taxRate })),
       subtotal,
       taxTotal: tax,
       total,
