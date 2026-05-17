@@ -54,9 +54,9 @@ export function SaleScreen() {
     setCart((old) => {
       const found = old.find((line) => line.id === product.id);
       if (found) {
-        return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
+        return old.map((line) => (line.id === product.id ? { ...line, taxRate, qty: line.qty + 1 } : line));
       }
-      return [...old, { ...product, qty: 1 }];
+      return [...old, { ...product, taxRate, qty: 1 }];
     });
   }
 
@@ -181,7 +181,7 @@ export function SaleScreen() {
     const salePayload = {
       id: `sale_${Date.now()}`,
       timestamp: istTimestamp,
-      items: cart,
+      items: cart.map((line) => ({ ...line, taxRate })),
       subtotal,
       taxTotal: tax,
       total,
