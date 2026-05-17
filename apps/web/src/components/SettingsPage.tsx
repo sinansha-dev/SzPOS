@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageLayout } from "./PageLayout";
 import { Save, AlertCircle } from "lucide-react";
 import { apiClient } from "../api/client";
 
+const SETTINGS_KEY = "szpos.settings";
+
+const defaultSettings = {
+  businessName: "SzPOS Store",
+  businessPhone: "+91 9876543210",
+  businessAddress: "123 Main Street, City, State",
+  gstNumber: "18AAAA0000A1Z5",
+  currencySymbol: "₹",
+  taxRate: "18"
+};
+
 export function SettingsPage() {
-  const [settings, setSettings] = useState({
-    businessName: "SzPOS Store",
-    businessPhone: "+91 9876543210",
-    businessAddress: "123 Main Street, City, State",
-    gstNumber: "18AAAA0000A1Z5",
-    currencySymbol: "₹",
-    taxRate: "18"
-  });
+  const [settings, setSettings] = useState(defaultSettings);
 
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +24,25 @@ export function SettingsPage() {
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        setSettings({ ...defaultSettings, ...JSON.parse(stored) });
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    }
+  }, []);
+
   const handleSave = () => {
-    console.log("Settings saved:", settings);
-    alert("Settings saved successfully!");
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alert("Failed to save settings.");
+    }
   };
 
   const handleResetPOS = async () => {
