@@ -1,77 +1,49 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { prisma } from "../services/store.js";
+import { requireRole, type AuthRequest } from "../middleware/auth.js";
 
 export const usersRouter = Router();
 
-usersRouter.get("/", async (_req, res) => {
-  try {
-    const users = await prisma.user.findMany({
-      orderBy: { name: 'asc' }
-    });
-    return res.json(users);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return res.status(500).json({ error: "Failed to fetch users" });
-  }
+usersRouter.get("/", requireRole(["OWNER", "ADMIN"]), async (req: AuthRequest, res) => {
+  const users = await prisma.user.findMany({ where: { accountId: req.authUser!.accountId }, orderBy: { createdAt: "desc" } });
+  return res.json(users.map(({ passwordHash, resetToken, resetTokenExp, ...u }) => u));
 });
 
-usersRouter.post("/", async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    const id = String(body.id ?? `user_${Date.now()}`);
-
-    const newUser = await prisma.user.create({
-      data: {
-        id,
-        name: String(body.name ?? ""),
-        username: String(body.username ?? ""),
-        role: (body.role as "admin" | "cashier" | "manager") ?? "cashier",
-        status: (body.status as "active" | "inactive") ?? "active"
-      }
-    });
-
-    return res.status(201).json(newUser);
-  } catch (error) {
-    console.error("Error creating user:", error);
-    return res.status(500).json({ error: "Failed to create user" });
-  }
-});
-
-usersRouter.put("/:id", async (req, res) => {
-  try {
-    const body = req.body as Record<string, unknown>;
-    const updated = await prisma.user.update({
-      where: { id: req.params.id },
-      data: {
-        name: body.name ? String(body.name) : undefined,
-        username: body.username ? String(body.username) : undefined,
-        role: body.role ? (body.role as "admin" | "cashier" | "manager") : undefined,
-        status: body.status ? (body.status as "active" | "inactive") : undefined
-      }
-    });
-
-    return res.json(updated);
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2025') {
-      return res.status(404).json({ error: "User not found" });
+usersRouter.post("/", requireRole(["OWNER", "ADMIN"]), async (req: AuthRequest, res) => {
+  const body = req.body as Record<string, unknown>;
+  const password = String(body.password ?? "password1234");
+  const user = await prisma.user.create({
+    data: {
+      id: `user_${Date.now()}`,
+      accountId: req.authUser!.accountId,
+      name: String(body.name ?? ""),
+      email: String(body.email ?? ""),
+      username: String(body.username ?? ""),
+      passwordHash: await bcrypt.hash(password, 10),
+      role: (body.role as any) ?? "CASHIER",
+      status: (body.status as any) ?? "ACTIVE"
     }
-    console.error("Error updating user:", error);
-    return res.status(500).json({ error: "Failed to update user" });
-  }
+  });
+  const { passwordHash, resetToken, resetTokenExp, ...safe } = user;
+  return res.status(201).json(safe);
 });
 
-usersRouter.delete("/:id", async (req, res) => {
-  try {
-    const deleted = await prisma.user.delete({
-      where: { id: req.params.id }
-    });
-
-    return res.json(deleted);
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2025') {
-      return res.status(404).json({ error: "User not found" });
+usersRouter.patch("/:id", requireRole(["OWNER", "ADMIN"]), async (req: AuthRequest, res) => {
+  const body = req.body as Record<string, unknown>;
+  const updated = await prisma.user.updateMany({
+    where: { id: req.params.id, accountId: req.authUser!.accountId },
+    data: {
+      name: body.name ? String(body.name) : undefined,
+      role: body.role ? (body.role as any) : undefined,
+      status: body.status ? (body.status as any) : undefined,
+      passwordHash: body.password ? await bcrypt.hash(String(body.password), 10) : undefined
     }
-    console.error("Error deleting user:", error);
-    return res.status(500).json({ error: "Failed to delete user" });
-  }
+  });
+  return res.json({ updated: updated.count });
+});
+
+usersRouter.delete("/:id", requireRole(["OWNER", "ADMIN"]), async (req: AuthRequest, res) => {
+  const deleted = await prisma.user.deleteMany({ where: { id: req.params.id, accountId: req.authUser!.accountId } });
+  return res.json({ deleted: deleted.count });
 });
