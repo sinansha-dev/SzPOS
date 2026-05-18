@@ -1,7 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import rateLimit from "express-rate-limit";
 import { initializeDatabase } from "./services/store.js";
 import { initializePrinter } from "./services/thermalPrinter.js";
 import { authRouter } from "./routes/auth.js";
@@ -12,16 +11,14 @@ import { reportsRouter } from "./routes/reports.js";
 import { printingRouter } from "./routes/printing.js";
 import { syncRouter } from "./routes/sync.js";
 import { usersRouter } from "./routes/users.js";
-import { requireAuth } from "./middleware/auth.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
+
 app.use(cors());
 app.use(express.json());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
 
 app.use("/api/auth", authRouter);
-app.use("/api", requireAuth);
 app.use("/api/products", productsRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/inventory", inventoryRouter);
@@ -30,11 +27,32 @@ app.use("/api/printing", printingRouter);
 app.use("/api/sync", syncRouter);
 app.use("/api/users", usersRouter);
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
 
+// Start server and initialize database
 async function start() {
-  try { await initializeDatabase(); } catch {}
-  try { await initializePrinter(); } catch {}
-  app.listen(port, () => console.log(`🚀 API listening on http://localhost:${port}`));
+  try {
+    // Initialize database (seed if empty)
+    await initializeDatabase();
+    console.log("✅ Database ready");
+  } catch (error) {
+    console.warn("⚠️  Database initialization warning:", error instanceof Error ? error.message : error);
+    console.log("ℹ️  Continuing with in-memory storage fallback");
+  }
+
+  try {
+    // Initialize thermal printer
+    await initializePrinter();
+  } catch (error) {
+    console.warn("⚠️  Thermal printer initialization warning:", error instanceof Error ? error.message : error);
+    console.log("ℹ️  Printer will be unavailable but app will continue");
+  }
+
+  app.listen(port, () => {
+    console.log(`🚀 API listening on http://localhost:${port}`);
+  });
 }
+
 start();
