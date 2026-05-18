@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./components/LoginPage";
 import { Dashboard } from "./components/Dashboard";
+import { SignupPage } from "./components/SignupPage";
 import { SaleScreenPage } from "./components/SaleScreenPage";
 import { ReportsPage } from "./components/ReportsPage";
 import { InventoryPage } from "./components/InventoryPage";
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <Routes>
             <Route path="/" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route
               path="/dashboard"
               element={

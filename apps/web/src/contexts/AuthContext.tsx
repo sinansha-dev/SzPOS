@@ -1,79 +1,18 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { apiClient } from "../api/client";
 
-interface User {
-  id: string;
-  username: string;
-  role: "admin" | "cashier" | "manager";
-  name: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
-}
-
+type Role = "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER";
+interface User { id: string; accountId: string; role: Role; email: string; name: string; }
+interface AuthContextType { user: User | null; isAuthenticated: boolean; login: (email: string, password: string)=>Promise<void>; signup: (p:{businessName:string;email:string;username:string;password:string;name:string})=>Promise<void>; logout: ()=>Promise<void>; }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const AUTH_STORAGE_KEY = "szpos_auth_user";
-
+const KEY_U = "szpos_auth_user"; const KEY_T = "szpos_access_token";
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Restore auth state from localStorage on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error("Failed to restore auth state:", err);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      }
-    }
-    setIsInitialized(true);
-  }, []);
-
-  const login = async (username: string, password: string) => {
-    // Simple mock authentication
-    // In production, this would call your backend API
-    if (username && password.length >= 4) {
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
-        username,
-        role: username === "admin" ? "admin" : "cashier",
-        name: username.charAt(0).toUpperCase() + username.slice(1)
-      };
-      setUser(mockUser);
-      // Persist to localStorage
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-    } else {
-      throw new Error("Invalid credentials");
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  };
-
-  // Don't render children until we've restored auth state
-  if (!isInitialized) {
-    return null;
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const [user, setUser] = useState<User | null>(null); const [ready,setReady]=useState(false);
+  useEffect(()=>{ const u=localStorage.getItem(KEY_U); if(u) setUser(JSON.parse(u)); setReady(true);},[]);
+  const login = async (email:string,password:string)=>{ const d=await apiClient.login(email,password); localStorage.setItem(KEY_T,d.accessToken); localStorage.setItem(KEY_U,JSON.stringify(d.user)); setUser(d.user); };
+  const signup = async (p:any)=>{ const d=await apiClient.signup(p); localStorage.setItem(KEY_T,d.accessToken); localStorage.setItem(KEY_U,JSON.stringify(d.user)); setUser(d.user); };
+  const logout = async ()=>{ await apiClient.logout(); localStorage.removeItem(KEY_T); localStorage.removeItem(KEY_U); setUser(null); };
+  if(!ready) return null;
+  return <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout }}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-}
+export function useAuth(){ const c=useContext(AuthContext); if(!c) throw new Error("useAuth must be used within AuthProvider"); return c; }
