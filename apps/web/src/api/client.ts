@@ -1,33 +1,152 @@
 /// <reference types="vite/client" />
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
-function authHeaders() {
-  const token = localStorage.getItem("szpos_access_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function request(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) } });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Request failed");
-  return res.json();
-}
-
 export const apiClient = {
-  login: (email: string, password: string) => request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  signup: (payload: Record<string, unknown>) => request("/auth/signup", { method: "POST", body: JSON.stringify(payload) }),
-  logout: () => request("/auth/logout", { method: "POST" }),
-  getProducts: (search?: string) => request(`/products${search ? `?search=${encodeURIComponent(search)}` : ""}`),
-  createProduct: (data: Record<string, unknown>) => request("/products", { method: "POST", body: JSON.stringify(data) }),
-  getUsers: () => request("/users"),
-  createUser: (data: Record<string, unknown>) => request("/users", { method: "POST", body: JSON.stringify(data) }),
-  updateUser: (id: string, data: Record<string, unknown>) => request(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  createSale: (data: Record<string, unknown>) => request("/sales", { method: "POST", body: JSON.stringify(data) }),
-  getSale: (id: string) => request(`/sales/${id}`),
-  getSalesReport: () => request("/reports"),
-  getItemWiseAnalytics: () => request("/reports/item-wise-analytics"),
-  printSaleReceipt: (saleId: string) => request("/printing/receipt", { method: "POST", body: JSON.stringify({ saleId }) }),
-  testPrinter: () => request("/printing/test", { method: "POST" }),
-  getInventory: () => request("/inventory"),
-  resetPOS: (password: string) => request("/auth/reset-pos", { method: "POST", body: JSON.stringify({ password }) }),
-  updateInventory: (productId: string, quantity: number) => request(`/inventory/${productId}`, { method: "PUT", body: JSON.stringify({ quantity }) })
+  // Products
+  async getProducts(search?: string) {
+    const url = new URL(`${API_BASE}/products`);
+    if (search) url.searchParams.set("search", search);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch products");
+    return res.json();
+  },
+
+  async updateProduct(id: string, data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/products/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to update product");
+    return res.json();
+  },
+
+  async createProduct(data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to create product");
+    return res.json();
+  },
+
+  // Users
+  async getUsers() {
+    const res = await fetch(`${API_BASE}/users`);
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return res.json();
+  },
+
+  async createUser(data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to create user");
+    return res.json();
+  },
+
+  async updateUser(id: string, data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to update user");
+    return res.json();
+  },
+
+  // Sales
+  async createSale(data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/sales`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) {
+      let errorMessage = "Failed to create sale";
+      try {
+        const payload = await res.json() as { error?: string; details?: string[] };
+        if (payload.error) {
+          errorMessage = payload.details?.length ? `${payload.error}: ${payload.details.join(", ")}` : payload.error;
+        }
+      } catch {
+        // keep generic fallback
+      }
+      throw new Error(errorMessage);
+    }
+
+    return res.json();
+  },
+
+  async getSale(id: string) {
+    const res = await fetch(`${API_BASE}/sales/${id}`);
+    if (!res.ok) throw new Error("Failed to fetch sale");
+    return res.json();
+  },
+
+  // Reports
+  async getSalesReport() {
+    const res = await fetch(`${API_BASE}/reports`);
+    if (!res.ok) throw new Error("Failed to fetch reports");
+    return res.json();
+  },
+
+  async getItemWiseAnalytics() {
+    const res = await fetch(`${API_BASE}/reports/item-wise-analytics`);
+    if (!res.ok) throw new Error("Failed to fetch item-wise analytics");
+    return res.json();
+  },
+
+  // Printing
+
+  async printSaleReceipt(saleId: string) {
+    const res = await fetch(`${API_BASE}/printing/receipt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saleId })
+    });
+    if (!res.ok) throw new Error("Failed to print sale receipt");
+    return res.json();
+  },
+
+  async testPrinter() {
+    const res = await fetch(`${API_BASE}/printing/test`, { method: "POST" });
+    if (!res.ok) throw new Error("Failed to test printer");
+    return res.json();
+  },
+
+  // Inventory
+  async getInventory() {
+    const res = await fetch(`${API_BASE}/inventory`);
+    if (!res.ok) throw new Error("Failed to fetch inventory");
+    return res.json();
+  },
+
+  async resetPOS(password: string) {
+    const res = await fetch(`${API_BASE}/auth/reset-pos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error((payload as { error?: string }).error || "Failed to reset POS");
+    }
+    return res.json();
+  },
+
+  async updateInventory(productId: string, quantity: number) {
+    const res = await fetch(`${API_BASE}/inventory/${productId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quantity })
+    });
+    if (!res.ok) throw new Error("Failed to update inventory");
+    return res.json();
+  }
 };

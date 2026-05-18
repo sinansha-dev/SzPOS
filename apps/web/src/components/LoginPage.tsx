@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Lock, LogIn } from "lucide-react";
 
 export function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -39,13 +39,13 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="username">Username</label>
             <input
-              id="email"
+              id="username"
               type="text"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               disabled={loading}
               required
             />
@@ -73,8 +73,8 @@ export function LoginPage() {
         </form>
 
         <div className="login-footer">
-          <p className="demo-creds">Demo: email: <strong>admin</strong> | password: <strong>1234</strong></p>
-        </div><p style={{marginTop:"12px"}}>New business? <a href="/signup">Sign up</a></p>
+          <p className="demo-creds">Demo: username: <strong>admin</strong> | password: <strong>1234</strong></p>
+        </div>
       </div>
     </div>
   );
