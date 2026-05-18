@@ -18,16 +18,6 @@ const RECEIPTS_KEY = "szpos.receipts";
 const SETTINGS_KEY = "szpos.settings";
 const DEFAULT_TAX_RATE = 0.18;
 
-const parseConfiguredTaxRate = (value: unknown, fallback = DEFAULT_TAX_RATE) => {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric) || numeric < 0) return fallback;
-  // Accept both percent input (18) and decimal input (0.18)
-  return numeric > 1 ? numeric / 100 : numeric;
-};
-
-const roundCurrency = (value: number) => Math.round(value * 100) / 100;
-
-
 export function SaleScreen() {
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -38,29 +28,17 @@ export function SaleScreen() {
 
 
   useEffect(() => {
-    const loadTaxRate = () => {
-      try {
-        const stored = localStorage.getItem(SETTINGS_KEY);
-        if (!stored) {
-          setTaxRate(DEFAULT_TAX_RATE);
-          return;
-        }
-        const parsed = JSON.parse(stored);
-        setTaxRate(parseConfiguredTaxRate(parsed.taxRate));
-      } catch (error) {
-        console.error("Failed to load tax settings:", error);
-        setTaxRate(DEFAULT_TAX_RATE);
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      const configuredRate = Number(parsed.taxRate);
+      if (!Number.isNaN(configuredRate) && configuredRate >= 0) {
+        setTaxRate(configuredRate / 100);
       }
-    };
-
-    loadTaxRate();
-    window.addEventListener("storage", loadTaxRate);
-    window.addEventListener("focus", loadTaxRate);
-
-    return () => {
-      window.removeEventListener("storage", loadTaxRate);
-      window.removeEventListener("focus", loadTaxRate);
-    };
+    } catch (error) {
+      console.error("Failed to load tax settings:", error);
+    }
   }, []);
 
   const filtered = useMemo(
@@ -68,9 +46,9 @@ export function SaleScreen() {
     [query]
   );
 
-  const total = roundCurrency(cart.reduce((sum, line) => sum + line.qty * line.price, 0));
-  const subtotal = roundCurrency(taxRate > 0 ? total / (1 + taxRate) : total);
-  const tax = roundCurrency(total - subtotal);
+  const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
+  const subtotal = taxRate > 0 ? total / (1 + taxRate) : total;
+  const tax = total - subtotal;
 
   function addProduct(product: Product) {
     setCart((old) => {

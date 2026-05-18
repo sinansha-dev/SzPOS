@@ -49,8 +49,6 @@ export function SaleScreenPage() {
   const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: string; timestamp: string } | null>(null);
   const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
-  const [printMethod, setPrintMethod] = useState("thermal");
-  const [kioskPrinting, setKioskPrinting] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,19 +61,13 @@ export function SaleScreenPage() {
         const stored = localStorage.getItem(SETTINGS_KEY);
         if (!stored) {
           setTaxRate(DEFAULT_TAX_RATE);
-          setPrintMethod("thermal");
-          setKioskPrinting(true);
           return;
         }
         const parsed = JSON.parse(stored);
         setTaxRate(parseConfiguredTaxRate(parsed.taxRate));
-        setPrintMethod(parsed.printMethod === "browser" ? "browser" : "thermal");
-        setKioskPrinting(parsed.kioskPrinting !== "false");
       } catch (error) {
         console.error("Failed to load tax settings:", error);
         setTaxRate(DEFAULT_TAX_RATE);
-        setPrintMethod("thermal");
-        setKioskPrinting(true);
       }
     };
 
@@ -202,19 +194,13 @@ export function SaleScreenPage() {
       const createdSale = await apiClient.createSale(payload);
 
       let printMessage = "Receipt printed";
-      if (printMethod === "browser") {
+      try {
+        const printResult = await apiClient.printSaleReceipt(createdSale.id);
+        if (printResult?.status === "queued") printMessage = "Printer offline - receipt queued";
+      } catch {
+        printMessage = "Thermal print failed - browser print used";
         setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
         setShouldAutoPrint(true);
-        printMessage = kioskPrinting ? "Browser kiosk print sent" : "Browser print dialog opened";
-      } else {
-        try {
-          const printResult = await apiClient.printSaleReceipt(createdSale.id);
-          if (printResult?.status === "queued") printMessage = "Printer offline - receipt queued";
-        } catch {
-          setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
-          setShouldAutoPrint(true);
-          printMessage = kioskPrinting ? "Thermal failed - kiosk browser print used" : "Thermal failed - browser print dialog opened";
-        }
       }
       setCart([]);
       setProducts((current) =>
