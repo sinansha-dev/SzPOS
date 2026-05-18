@@ -1,17 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageLayout } from "./PageLayout";
 import { Save, AlertCircle } from "lucide-react";
 import { apiClient } from "../api/client";
 
+const SETTINGS_KEY = "szpos.settings";
+
+const defaultSettings = {
+  businessName: "SzPOS Store",
+  businessPhone: "+91 9876543210",
+  businessAddress: "123 Main Street, City, State",
+  gstNumber: "18AAAA0000A1Z5",
+  currencySymbol: "₹",
+  taxRate: "18",
+  printMethod: "thermal",
+  kioskPrinting: "true"
+};
+
 export function SettingsPage() {
-  const [settings, setSettings] = useState({
-    businessName: "SzPOS Store",
-    businessPhone: "+91 9876543210",
-    businessAddress: "123 Main Street, City, State",
-    gstNumber: "18AAAA0000A1Z5",
-    currencySymbol: "₹",
-    taxRate: "18"
-  });
+  const [settings, setSettings] = useState(defaultSettings);
 
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +26,25 @@ export function SettingsPage() {
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        setSettings({ ...defaultSettings, ...JSON.parse(stored) });
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    }
+  }, []);
+
   const handleSave = () => {
-    console.log("Settings saved:", settings);
-    alert("Settings saved successfully!");
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alert("Failed to save settings.");
+    }
   };
 
   const handleResetPOS = async () => {
@@ -35,7 +57,7 @@ export function SettingsPage() {
 
     setLoading(true);
     try {
-      const response = await apiClient.post("/auth/reset-pos", { password });
+      const response = await apiClient.resetPOS(password);
       alert("✅ POS reset successfully!\n\n" + JSON.stringify(response.resetData, null, 2));
       window.location.reload();
     } catch (error: any) {
@@ -118,6 +140,37 @@ export function SettingsPage() {
               />
             </div>
           </div>
+
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Print Method</label>
+              <select
+                name="printMethod"
+                value={settings.printMethod}
+                onChange={handleChange}
+              >
+                <option value="thermal">Thermal Printer API (Recommended)</option>
+                <option value="browser">Browser Print</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Chrome Kiosk Printing</label>
+              <select
+                name="kioskPrinting"
+                value={settings.kioskPrinting}
+                onChange={handleChange}
+              >
+                <option value="true">Enabled (silent print)</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "8px" }}>
+            For silent print, launch Chrome with <code>--kiosk-printing</code>.
+          </p>
 
           <button onClick={handleSave} className="btn-primary save-btn">
             <Save size={20} />

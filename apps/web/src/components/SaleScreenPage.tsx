@@ -8,6 +8,17 @@ import { Printer, AlertCircle } from "lucide-react";
 type Product = { id: string; name: string; price: number; taxRate: number; stock: number };
 type CartLine = Product & { qty: number };
 
+const SETTINGS_KEY = "szpos.settings";
+const DEFAULT_TAX_RATE = 0.18;
+
+const parseConfiguredTaxRate = (value: unknown, fallback = DEFAULT_TAX_RATE) => {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric) || numeric < 0) return fallback;
+  return numeric > 1 ? numeric / 100 : numeric;
+};
+
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
+
 function normalizeProducts(raw: unknown): Product[] {
   const source = Array.isArray(raw)
     ? raw
@@ -37,10 +48,45 @@ export function SaleScreenPage() {
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
   const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: string; timestamp: string } | null>(null);
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+  const [printMethod, setPrintMethod] = useState("thermal");
+  const [kioskPrinting, setKioskPrinting] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadProducts();
+  }, []);
+
+  useEffect(() => {
+    const loadTaxRate = () => {
+      try {
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (!stored) {
+          setTaxRate(DEFAULT_TAX_RATE);
+          setPrintMethod("thermal");
+          setKioskPrinting(true);
+          return;
+        }
+        const parsed = JSON.parse(stored);
+        setTaxRate(parseConfiguredTaxRate(parsed.taxRate));
+        setPrintMethod(parsed.printMethod === "browser" ? "browser" : "thermal");
+        setKioskPrinting(parsed.kioskPrinting !== "false");
+      } catch (error) {
+        console.error("Failed to load tax settings:", error);
+        setTaxRate(DEFAULT_TAX_RATE);
+        setPrintMethod("thermal");
+        setKioskPrinting(true);
+      }
+    };
+
+    loadTaxRate();
+    window.addEventListener("storage", loadTaxRate);
+    window.addEventListener("focus", loadTaxRate);
+
+    return () => {
+      window.removeEventListener("storage", loadTaxRate);
+      window.removeEventListener("focus", loadTaxRate);
+    };
   }, []);
 
   useEffect(() => {
@@ -84,9 +130,9 @@ export function SaleScreenPage() {
     [query, products]
   );
 
-  const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
-  const subtotal = cart.reduce((sum, line) => sum + (line.qty * line.price) / (1 + line.taxRate), 0);
-  const tax = total - subtotal;
+  const total = roundCurrency(cart.reduce((sum, line) => sum + line.qty * line.price, 0));
+  const subtotal = roundCurrency(taxRate > 0 ? total / (1 + taxRate) : total);
+  const tax = roundCurrency(total - subtotal);
 
   const receiptItems = lastReceipt?.items ?? cart;
   const receiptTotal = lastReceipt?.total ?? total;
@@ -102,7 +148,7 @@ export function SaleScreenPage() {
           return old;
         }
 
-        return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
+        return old.map((line) => (line.id === product.id ? { ...line, taxRate, qty: line.qty + 1 } : line));
       }
 
       if (product.stock <= 0) {
@@ -110,7 +156,7 @@ export function SaleScreenPage() {
         return old;
       }
 
-      return [...old, { ...product, qty: 1 }];
+      return [...old, { ...product, taxRate, qty: 1 }];
     });
   }
 
@@ -144,7 +190,7 @@ export function SaleScreenPage() {
     const payload = {
       id: `sale_${Date.now()}`,
       timestamp: receiptTime,
-      items: snapshot,
+      items: snapshot.map((line) => ({ ...line, taxRate })),
       subtotal,
       taxTotal: tax,
       total,
@@ -153,9 +199,23 @@ export function SaleScreenPage() {
     };
 
     try {
-      await apiClient.createSale(payload);
-      setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
-      setShouldAutoPrint(true);
+      const createdSale = await apiClient.createSale(payload);
+
+      let printMessage = "Receipt printed";
+      if (printMethod === "browser") {
+        setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
+        setShouldAutoPrint(true);
+        printMessage = kioskPrinting ? "Browser kiosk print sent" : "Browser print dialog opened";
+      } else {
+        try {
+          const printResult = await apiClient.printSaleReceipt(createdSale.id);
+          if (printResult?.status === "queued") printMessage = "Printer offline - receipt queued";
+        } catch {
+          setLastReceipt({ items: snapshot, total, paidBy: paymentMethod, timestamp: receiptTime });
+          setShouldAutoPrint(true);
+          printMessage = kioskPrinting ? "Thermal failed - kiosk browser print used" : "Thermal failed - browser print dialog opened";
+        }
+      }
       setCart([]);
       setProducts((current) =>
         current.map((product) => {
@@ -170,7 +230,7 @@ export function SaleScreenPage() {
           };
         })
       );
-      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓`);
+      setStatus(`Sale (${paymentMethod}) - ₹${total.toFixed(2)} ✓ | ${printMessage}`);
       setError("");
       setTimeout(() => setStatus("Ready"), 3000);
     } catch (err) {
@@ -272,7 +332,7 @@ export function SaleScreenPage() {
                 <span>₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="total-row">
-                <span>Tax (5%)</span>
+                <span>Tax ({(taxRate * 100).toFixed(2)}%)</span>
                 <span>₹{tax.toFixed(2)}</span>
               </div>
               <div className="total-row grand-total">
@@ -381,11 +441,11 @@ export function SaleScreenPage() {
                 <div style={{ marginBottom: "12px", fontSize: "11px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                     <span>Subtotal:</span>
-                    <span>₹{(receiptTotal * 0.95).toFixed(2)}</span>
+                    <span>₹{(taxRate > 0 ? receiptTotal / (1 + taxRate) : receiptTotal).toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                     <span>Tax/GST:</span>
-                    <span>₹{(receiptTotal * 0.05).toFixed(2)}</span>
+                    <span>₹{(receiptTotal - (taxRate > 0 ? receiptTotal / (1 + taxRate) : receiptTotal)).toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "bold", borderTopWidth: "2px", borderTopStyle: "double", paddingTop: "6px" }}>
                     <span>TOTAL:</span>

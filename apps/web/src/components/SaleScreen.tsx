@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { enqueue } from "../data/localQueue";
 import { syncNow } from "../sync/syncEngine";
 import { getISTTimestamp } from "../utils/timezone";
@@ -15,29 +15,70 @@ const quickProducts: Product[] = [
 ];
 
 const RECEIPTS_KEY = "szpos.receipts";
+const SETTINGS_KEY = "szpos.settings";
+const DEFAULT_TAX_RATE = 0.18;
+
+const parseConfiguredTaxRate = (value: unknown, fallback = DEFAULT_TAX_RATE) => {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric) || numeric < 0) return fallback;
+  // Accept both percent input (18) and decimal input (0.18)
+  return numeric > 1 ? numeric / 100 : numeric;
+};
+
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
+
 
 export function SaleScreen() {
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [status, setStatus] = useState("Ready");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+
+
+
+  useEffect(() => {
+    const loadTaxRate = () => {
+      try {
+        const stored = localStorage.getItem(SETTINGS_KEY);
+        if (!stored) {
+          setTaxRate(DEFAULT_TAX_RATE);
+          return;
+        }
+        const parsed = JSON.parse(stored);
+        setTaxRate(parseConfiguredTaxRate(parsed.taxRate));
+      } catch (error) {
+        console.error("Failed to load tax settings:", error);
+        setTaxRate(DEFAULT_TAX_RATE);
+      }
+    };
+
+    loadTaxRate();
+    window.addEventListener("storage", loadTaxRate);
+    window.addEventListener("focus", loadTaxRate);
+
+    return () => {
+      window.removeEventListener("storage", loadTaxRate);
+      window.removeEventListener("focus", loadTaxRate);
+    };
+  }, []);
 
   const filtered = useMemo(
     () => quickProducts.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
     [query]
   );
 
-  const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
-  const subtotal = cart.reduce((sum, line) => sum + (line.qty * line.price) / (1 + line.taxRate), 0);
-  const tax = total - subtotal;
+  const total = roundCurrency(cart.reduce((sum, line) => sum + line.qty * line.price, 0));
+  const subtotal = roundCurrency(taxRate > 0 ? total / (1 + taxRate) : total);
+  const tax = roundCurrency(total - subtotal);
 
   function addProduct(product: Product) {
     setCart((old) => {
       const found = old.find((line) => line.id === product.id);
       if (found) {
-        return old.map((line) => (line.id === product.id ? { ...line, qty: line.qty + 1 } : line));
+        return old.map((line) => (line.id === product.id ? { ...line, taxRate, qty: line.qty + 1 } : line));
       }
-      return [...old, { ...product, qty: 1 }];
+      return [...old, { ...product, taxRate, qty: 1 }];
     });
   }
 
@@ -162,7 +203,7 @@ export function SaleScreen() {
     const salePayload = {
       id: `sale_${Date.now()}`,
       timestamp: istTimestamp,
-      items: cart,
+      items: cart.map((line) => ({ ...line, taxRate })),
       subtotal,
       taxTotal: tax,
       total,

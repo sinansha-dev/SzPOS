@@ -102,10 +102,41 @@ export const apiClient = {
     return res.json();
   },
 
+  // Printing
+
+  async printSaleReceipt(saleId: string) {
+    const res = await fetch(`${API_BASE}/printing/receipt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saleId })
+    });
+    if (!res.ok) throw new Error("Failed to print sale receipt");
+    return res.json();
+  },
+
+  async testPrinter() {
+    const res = await fetch(`${API_BASE}/printing/test`, { method: "POST" });
+    if (!res.ok) throw new Error("Failed to test printer");
+    return res.json();
+  },
+
   // Inventory
   async getInventory() {
     const res = await fetch(`${API_BASE}/inventory`);
     if (!res.ok) throw new Error("Failed to fetch inventory");
+    return res.json();
+  },
+
+  async resetPOS(password: string) {
+    const res = await fetch(`${API_BASE}/auth/reset-pos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error((payload as { error?: string }).error || "Failed to reset POS");
+    }
     return res.json();
   },
 
