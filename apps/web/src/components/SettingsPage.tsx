@@ -139,6 +139,37 @@ export function SettingsPage() {
             </div>
           </div>
 
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Print Method</label>
+              <select
+                name="printMethod"
+                value={settings.printMethod}
+                onChange={handleChange}
+              >
+                <option value="thermal">Thermal Printer API (Recommended)</option>
+                <option value="browser">Browser Print</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Chrome Kiosk Printing</label>
+              <select
+                name="kioskPrinting"
+                value={settings.kioskPrinting}
+                onChange={handleChange}
+              >
+                <option value="true">Enabled (silent print)</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "8px" }}>
+            For silent print, launch Chrome with <code>--kiosk-printing</code>.
+          </p>
+
           <button onClick={handleSave} className="btn-primary save-btn">
             <Save size={20} />
             Save Settings
