@@ -31,7 +31,7 @@ purchaseOrdersRouter.get("/", async (_req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    return res.json(purchaseOrders.map(po => po.payload));
+    return res.json(purchaseOrders.map((po: { payload: unknown }) => po.payload));
   } catch (error) {
     console.error("Error fetching purchase orders:", error);
     return res.status(500).json({ error: "Failed to fetch purchase orders" });
