@@ -64,7 +64,7 @@ export function InventoryPage() {
   const handleDelete = async (productId: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        await apiClient.updateProduct(productId, { stock: 0 });
+        await apiClient.deleteProduct(productId);
         await loadProducts();
         setError("");
       } catch (err) {

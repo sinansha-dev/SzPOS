@@ -71,17 +71,16 @@ productsRouter.put("/:id", async (req, res) => {
 
 productsRouter.delete("/:id", async (req, res) => {
   try {
-    const updated = await prisma.product.update({
-      where: { id: req.params.id },
-      data: { stock: 0 }
+    const deleted = await prisma.product.delete({
+      where: { id: req.params.id }
     });
 
-    return res.json(updated);
+    return res.json(deleted);
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2025') {
       return res.status(404).json({ error: "Product not found" });
     }
-    console.error("Error removing product stock:", error);
-    return res.status(500).json({ error: "Failed to remove product stock" });
+    console.error("Error deleting product:", error);
+    return res.status(500).json({ error: "Failed to delete product" });
   }
 });
