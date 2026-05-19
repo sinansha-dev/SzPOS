@@ -49,6 +49,12 @@ export function SaleScreenPage() {
   const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<{ items: CartLine[]; total: number; paidBy: string; timestamp: string } | null>(null);
   const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+  const [businessDetails, setBusinessDetails] = useState({
+    businessName: "",
+    businessPhone: "",
+    businessAddress: "",
+    gstNumber: ""
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,6 +71,12 @@ export function SaleScreenPage() {
         }
         const parsed = JSON.parse(stored);
         setTaxRate(parseConfiguredTaxRate(parsed.taxRate));
+        setBusinessDetails({
+          businessName: parsed.businessName ?? "",
+          businessPhone: parsed.businessPhone ?? "",
+          businessAddress: parsed.businessAddress ?? "",
+          gstNumber: parsed.gstNumber ?? ""
+        });
       } catch (error) {
         console.error("Failed to load tax settings:", error);
         setTaxRate(DEFAULT_TAX_RATE);
@@ -372,8 +384,11 @@ export function SaleScreenPage() {
           <div style={{ maxWidth: "400px", margin: "0 auto", fontFamily: "monospace", fontSize: "12px" }}>
             {/* Header */}
             <div style={{ textAlign: "center", marginBottom: "8px" }}>
-              <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: "bold" }}>SZPOS</h2>
+              <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: "bold" }}>{businessDetails.businessName || "SZPOS"}</h2>
               <p style={{ margin: "0", fontSize: "14px" }}>Receipt</p>
+              {businessDetails.businessPhone && <p style={{ margin: "0", fontSize: "11px" }}>{businessDetails.businessPhone}</p>}
+              {businessDetails.businessAddress && <p style={{ margin: "0", fontSize: "11px" }}>{businessDetails.businessAddress}</p>}
+              {businessDetails.gstNumber && <p style={{ margin: "0", fontSize: "11px" }}>GST: {businessDetails.gstNumber}</p>}
               <p style={{ margin: "0", letterSpacing: "1px" }}>═══════════════════════════════</p>
             </div>
 

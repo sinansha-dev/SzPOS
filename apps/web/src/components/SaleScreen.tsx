@@ -7,12 +7,6 @@ import { apiClient } from "../api/client";
 type Product = { id: string; name: string; price: number; taxRate: number };
 type CartLine = Product & { qty: number };
 
-const quickProducts: Product[] = [
-  { id: "p_001", name: "Chocolate Cake", price: 120, taxRate: 0.05 },
-  { id: "p_002", name: "Donut", price: 40, taxRate: 0.05 },
-  { id: "p_003", name: "Cookie", price: 30, taxRate: 0.05 },
-  { id: "p_004", name: "Brownie", price: 60, taxRate: 0.05 }
-];
 
 const RECEIPTS_KEY = "szpos.receipts";
 const SETTINGS_KEY = "szpos.settings";
@@ -20,12 +14,48 @@ const DEFAULT_TAX_RATE = 0.18;
 
 export function SaleScreen() {
   const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [status, setStatus] = useState("Ready");
   const [isProcessing, setIsProcessing] = useState(false);
   const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+  const [businessDetails, setBusinessDetails] = useState({
+    businessName: "",
+    businessPhone: "",
+    businessAddress: "",
+    gstNumber: ""
+  });
 
 
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const data = await apiClient.getProducts();
+        const source = Array.isArray(data)
+          ? data
+          : data && typeof data === "object" && Array.isArray((data as { products?: unknown }).products)
+            ? (data as { products: unknown[] }).products
+            : [];
+
+        const normalized = source
+          .map((row) => row as Partial<Product>)
+          .filter((row) => typeof row.id === "string" && typeof row.name === "string")
+          .map((row) => ({
+            id: row.id as string,
+            name: row.name as string,
+            price: Number(row.price ?? 0),
+            taxRate: Number(row.taxRate ?? 0)
+          }));
+
+        setProducts(normalized);
+      } catch (error) {
+        console.error("Failed to load products:", error);
+        setStatus("Failed to load products");
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   useEffect(() => {
     try {
@@ -36,14 +66,20 @@ export function SaleScreen() {
       if (!Number.isNaN(configuredRate) && configuredRate >= 0) {
         setTaxRate(configuredRate / 100);
       }
+      setBusinessDetails({
+        businessName: parsed.businessName ?? "",
+        businessPhone: parsed.businessPhone ?? "",
+        businessAddress: parsed.businessAddress ?? "",
+        gstNumber: parsed.gstNumber ?? ""
+      });
     } catch (error) {
       console.error("Failed to load tax settings:", error);
     }
   }, []);
 
   const filtered = useMemo(
-    () => quickProducts.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
-    [query]
+    () => products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
+    [query, products]
   );
 
   const total = cart.reduce((sum, line) => sum + line.qty * line.price, 0);
@@ -112,8 +148,11 @@ export function SaleScreen() {
       </head>
       <body>
         <div class="header">
-          <h1>SzPOS</h1>
+          <h1>${businessDetails.businessName || "SzPOS"}</h1>
           <p>Receipt</p>
+          ${businessDetails.businessPhone ? `<p>${businessDetails.businessPhone}</p>` : ""}
+          ${businessDetails.businessAddress ? `<p>${businessDetails.businessAddress}</p>` : ""}
+          ${businessDetails.gstNumber ? `<p>GST: ${businessDetails.gstNumber}</p>` : ""}
           <p>ID: ${saleData.id}</p>
           <p>${saleData.timestamp}</p>
         </div>

@@ -6,10 +6,10 @@ import { apiClient } from "../api/client";
 const SETTINGS_KEY = "szpos.settings";
 
 const defaultSettings = {
-  businessName: "SzPOS Store",
-  businessPhone: "+91 9876543210",
-  businessAddress: "123 Main Street, City, State",
-  gstNumber: "18AAAA0000A1Z5",
+  businessName: "",
+  businessPhone: "",
+  businessAddress: "",
+  gstNumber: "",
   currencySymbol: "₹",
   taxRate: "18",
   printMethod: "thermal",
