@@ -10,7 +10,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("szpos-theme");
-    return saved === "dark" ? "dark" : "light";
+    return saved === "light" ? "light" : "dark";
   });
 
   useEffect(() => {
