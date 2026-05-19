@@ -48,7 +48,7 @@ export function SettingsPage() {
   };
 
   const handleResetPOS = async () => {
-    const password = prompt("Enter reset password to confirm POS reset:");
+    const password = prompt("Enter admin password to confirm POS reset:");
     if (!password) return;
 
     if (!confirm("⚠️ This will clear all sales, returns, and reset inventory.\nContinue?")) {

@@ -3,8 +3,9 @@ import { prisma } from "../services/store.js";
 
 export const authRouter = Router();
 
-// Default reset password for development
-const RESET_PASSWORD = process.env.RESET_PASSWORD || "admin123";
+// Keep reset password aligned with admin login password (default: 1234)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+const RESET_PASSWORD = process.env.RESET_PASSWORD || ADMIN_PASSWORD;
 
 authRouter.post("/login", (req, res) => {
   const { email } = req.body as { email?: string };
