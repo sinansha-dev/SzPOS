@@ -11,7 +11,9 @@ const defaultSettings = {
   businessAddress: "123 Main Street, City, State",
   gstNumber: "18AAAA0000A1Z5",
   currencySymbol: "₹",
-  taxRate: "18"
+  taxRate: "18",
+  printMethod: "thermal",
+  kioskPrinting: "false"
 };
 
 export function SettingsPage() {
