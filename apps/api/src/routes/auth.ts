@@ -3,8 +3,9 @@ import { prisma } from "../services/store.js";
 
 export const authRouter = Router();
 
-// Default reset password for development
-const RESET_PASSWORD = process.env.RESET_PASSWORD || "admin123";
+// Keep reset password aligned with admin login password (default: 1234)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+const RESET_PASSWORD = process.env.RESET_PASSWORD || ADMIN_PASSWORD;
 
 authRouter.post("/login", (req, res) => {
   const { email } = req.body as { email?: string };
@@ -42,20 +43,10 @@ authRouter.post("/reset-pos", async (req, res) => {
     await prisma.return.deleteMany();
     await prisma.purchaseOrder.deleteMany();
 
-    // Reset inventory to initial values
-    const initialStocks: Record<string, number> = {
-      "p_001": 12,  // Chocolate Cake
-      "p_002": 50,  // Donut
-      "p_003": 80,  // Cookie
-      "p_004": 25   // Brownie
-    };
-
-    for (const [productId, stock] of Object.entries(initialStocks)) {
-      await prisma.product.update({
-        where: { id: productId },
-        data: { stock }
-      });
-    }
+    // Reset inventory for all products without hardcoded product ids
+    await prisma.product.updateMany({
+      data: { stock: 0 }
+    });
 
     return res.json({
       success: true,

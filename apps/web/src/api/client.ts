@@ -32,6 +32,14 @@ export const apiClient = {
     return res.json();
   },
 
+  async deleteProduct(id: string) {
+    const res = await fetch(`${API_BASE}/products/${id}`, {
+      method: "DELETE"
+    });
+    if (!res.ok) throw new Error("Failed to delete product");
+    return res.json();
+  },
+
   // Users
   async getUsers() {
     const res = await fetch(`${API_BASE}/users`);
