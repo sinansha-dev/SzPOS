@@ -24,8 +24,12 @@ export function SaleScreen() {
   const [status, setStatus] = useState("Ready");
   const [isProcessing, setIsProcessing] = useState(false);
   const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
-
-
+  const [businessDetails, setBusinessDetails] = useState({
+    businessName: "",
+    businessPhone: "",
+    businessAddress: "",
+    gstNumber: ""
+  });
 
   useEffect(() => {
     try {
@@ -36,6 +40,12 @@ export function SaleScreen() {
       if (!Number.isNaN(configuredRate) && configuredRate >= 0) {
         setTaxRate(configuredRate / 100);
       }
+      setBusinessDetails({
+        businessName: parsed.businessName ?? "",
+        businessPhone: parsed.businessPhone ?? "",
+        businessAddress: parsed.businessAddress ?? "",
+        gstNumber: parsed.gstNumber ?? ""
+      });
     } catch (error) {
       console.error("Failed to load tax settings:", error);
     }
@@ -112,8 +122,11 @@ export function SaleScreen() {
       </head>
       <body>
         <div class="header">
-          <h1>SzPOS</h1>
+          <h1>${businessDetails.businessName || "SzPOS"}</h1>
           <p>Receipt</p>
+          ${businessDetails.businessPhone ? `<p>${businessDetails.businessPhone}</p>` : ""}
+          ${businessDetails.businessAddress ? `<p>${businessDetails.businessAddress}</p>` : ""}
+          ${businessDetails.gstNumber ? `<p>GST: ${businessDetails.gstNumber}</p>` : ""}
           <p>ID: ${saleData.id}</p>
           <p>${saleData.timestamp}</p>
         </div>
