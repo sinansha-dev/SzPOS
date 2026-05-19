@@ -60,8 +60,9 @@ export function SettingsPage() {
       const response = await apiClient.resetPOS(password);
       alert("✅ POS reset successfully!\n\n" + JSON.stringify(response.resetData, null, 2));
       window.location.reload();
-    } catch (error: any) {
-      alert("❌ Reset failed: " + (error.response?.data?.error || "Unknown error"));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      alert("❌ Reset failed: " + message);
     } finally {
       setLoading(false);
     }
