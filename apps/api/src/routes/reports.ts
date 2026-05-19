@@ -7,7 +7,7 @@ export const reportsRouter = Router();
 reportsRouter.get("/", async (_req, res) => {
   try {
     const sales = await prisma.sale.findMany();
-    const list = sales.map(sale => sale.payload as Record<string, unknown>);
+    const list = sales.map((sale: { payload: unknown }) => sale.payload as Record<string, unknown>);
 
     const gross = list.reduce((sum, sale) => sum + Number(sale.total ?? 0), 0);
     const tax = list.reduce((sum, sale) => sum + Number(sale.taxTotal ?? 0), 0);
@@ -44,7 +44,7 @@ reportsRouter.get("/", async (_req, res) => {
 reportsRouter.get("/daily-sales", async (_req, res) => {
   try {
     const sales = await prisma.sale.findMany();
-    const list = sales.map(sale => sale.payload as Record<string, unknown>);
+    const list = sales.map((sale: { payload: unknown }) => sale.payload as Record<string, unknown>);
 
     const gross = list.reduce((sum, sale) => sum + Number(sale.total ?? 0), 0);
     const tax = list.reduce((sum, sale) => sum + Number(sale.taxTotal ?? 0), 0);
@@ -70,7 +70,7 @@ reportsRouter.get("/item-wise-analytics", async (_req, res) => {
     const sales = await prisma.sale.findMany();
 
     // Create product map for quick lookup
-    const productMap = new Map(products.map(p => [p.id, p]));
+    const productMap = new Map(products.map((p: { id: string; name?: string; sku?: string }) => [p.id, p]));
 
     // Aggregate sales by item
     const itemAnalytics: Record<string, {
@@ -88,10 +88,10 @@ reportsRouter.get("/item-wise-analytics", async (_req, res) => {
       lastSoldDate: string;
     }> = {};
 
-    sales.forEach((sale) => {
+    sales.forEach((sale: { payload: unknown }) => {
       const payload = sale.payload as Record<string, unknown>;
       const items = (payload.items as unknown[]) ?? [];
-      const saleItems = items.map(item => item as Record<string, unknown>);
+      const saleItems = items.map((item: unknown) => item as Record<string, unknown>);
       const saleDate = String(payload.timestamp ?? getISTDateString());
 
       saleItems.forEach((saleItem) => {
@@ -158,7 +158,7 @@ reportsRouter.get("/item-wise-analytics", async (_req, res) => {
         topSellingByRevenue: topSellingItem?.productName,
         topSellingByQuantity: topSellingByQuantity?.productName
       },
-      items: analyticsArray.map(item => ({
+      items: analyticsArray.map((item) => ({
         ...item,
         profitMargin: item.unitPrice > 0 ? Math.round(((item.averageUnitPrice - item.unitPrice) / item.unitPrice) * 100) : 0
       }))
