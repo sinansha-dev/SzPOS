@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import { execSync } from "node:child_process";
 import { initializeDatabase } from "./services/store.js";
 import { initializePrinter } from "./services/thermalPrinter.js";
 import { authRouter } from "./routes/auth.js";
@@ -39,6 +40,13 @@ app.get("/health", (_req, res) => {
 
 // Start server and initialize database
 async function start() {
+  try {
+    execSync("npx prisma db push", { stdio: "inherit", cwd: process.cwd() });
+    console.log("✅ Prisma schema synced to database");
+  } catch (error) {
+    console.warn("⚠️  Prisma db push warning:", error instanceof Error ? error.message : error);
+  }
+
   try {
     // Initialize database (seed if empty)
     await initializeDatabase();

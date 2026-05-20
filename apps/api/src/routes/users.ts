@@ -3,6 +3,22 @@ import { prisma } from "../services/store.js";
 
 export const usersRouter = Router();
 
+const ROLE_MAP = {
+  owner: "OWNER",
+  admin: "ADMIN",
+  cashier: "CASHIER",
+  kitchen: "KITCHEN",
+  viewer: "VIEWER"
+} as const;
+
+function normalizeRole(input: unknown): "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER" {
+  const raw = String(input ?? "CASHIER").trim();
+  const upper = raw.toUpperCase();
+  if (["OWNER", "ADMIN", "CASHIER", "KITCHEN", "VIEWER"].includes(upper)) return upper as any;
+  return (ROLE_MAP[raw.toLowerCase() as keyof typeof ROLE_MAP] ?? "CASHIER") as any;
+}
+
+
 usersRouter.get("/", async (_req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -25,7 +41,7 @@ usersRouter.post("/", async (req, res) => {
         id,
         name: String(body.name ?? ""),
         username: String(body.username ?? ""),
-        role: (body.role as "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER") ?? "CASHIER",
+        role: normalizeRole(body.role),
         status: (body.status as "active" | "inactive") ?? "active"
       }
     });
@@ -45,7 +61,7 @@ usersRouter.put("/:id", async (req, res) => {
       data: {
         name: body.name ? String(body.name) : undefined,
         username: body.username ? String(body.username) : undefined,
-        role: body.role ? (body.role as "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER") : undefined,
+        role: body.role ? normalizeRole(body.role) : undefined,
         status: body.status ? (body.status as "active" | "inactive") : undefined
       }
     });
