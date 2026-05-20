@@ -38,9 +38,9 @@ export async function initializeDatabase() {
     console.log("👥 Seeding initial users...");
     await prisma.user.createMany({
       data: [
-        { id: "u_001", name: "Admin User", username: "admin", role: "admin", status: "active" },
-        { id: "u_002", name: "John Cashier", username: "john", role: "cashier", status: "active" },
-        { id: "u_003", name: "Jane Manager", username: "jane", role: "manager", status: "active" }
+        { id: "u_001", name: "Admin User", username: "ADMIN", role: "ADMIN", status: "active" },
+        { id: "u_002", name: "John Cashier", username: "john", role: "CASHIER", status: "active" },
+        { id: "u_003", name: "Jane Manager", username: "jane", role: "KITCHEN", status: "active" }
       ]
     });
     console.log("✅ Database initialized with sample users");

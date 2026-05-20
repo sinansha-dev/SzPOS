@@ -11,6 +11,8 @@ import { ReportsPage } from "./components/ReportsPage";
 import { InventoryPage } from "./components/InventoryPage";
 import { UsersPage } from "./components/UsersPage";
 import { SettingsPage } from "./components/SettingsPage";
+import { ExpensesPage } from "./components/ExpensesPage";
+import { SalesOrdersPage } from "./components/SalesOrdersPage";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -23,15 +25,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
+                <ProtectedRoute permission="dashboard:view"><Dashboard /></ProtectedRoute>
               }
             />
             <Route
               path="/sales"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="sales:view">
                   <SaleScreenPage />
                 </ProtectedRoute>
               }
@@ -39,7 +39,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/reports"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="reports:view">
                   <ReportsPage />
                 </ProtectedRoute>
               }
@@ -47,7 +47,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/inventory"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="inventory:view">
                   <InventoryPage />
                 </ProtectedRoute>
               }
@@ -55,15 +55,31 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/users"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="users:view">
                   <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales-orders"
+              element={
+                <ProtectedRoute permission="salesOrders:view">
+                  <SalesOrdersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute permission="expenses:view">
+                  <ExpensesPage />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/settings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute permission="settings:view">
                   <SettingsPage />
                 </ProtectedRoute>
               }
