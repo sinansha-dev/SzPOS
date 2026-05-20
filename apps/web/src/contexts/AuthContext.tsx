@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 interface User {
   id: string;
   username: string;
-  role: "admin" | "cashier" | "manager";
+  role: "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER";
   name: string;
 }
 
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const mockUser: User = {
         id: `user_${Date.now()}`,
         username,
-        role: username === "admin" ? "admin" : "cashier",
+        role: username.toLowerCase() === "owner" ? "OWNER" : username.toLowerCase() === "admin" ? "ADMIN" : username.toLowerCase() === "viewer" ? "VIEWER" : username.toLowerCase() === "kitchen" ? "KITCHEN" : "CASHIER",
         name: username.charAt(0).toUpperCase() + username.slice(1)
       };
       setUser(mockUser);

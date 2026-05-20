@@ -25,7 +25,7 @@ usersRouter.post("/", async (req, res) => {
         id,
         name: String(body.name ?? ""),
         username: String(body.username ?? ""),
-        role: (body.role as "admin" | "cashier" | "manager") ?? "cashier",
+        role: (body.role as "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER") ?? "CASHIER",
         status: (body.status as "active" | "inactive") ?? "active"
       }
     });
@@ -45,7 +45,7 @@ usersRouter.put("/:id", async (req, res) => {
       data: {
         name: body.name ? String(body.name) : undefined,
         username: body.username ? String(body.username) : undefined,
-        role: body.role ? (body.role as "admin" | "cashier" | "manager") : undefined,
+        role: body.role ? (body.role as "OWNER" | "ADMIN" | "CASHIER" | "KITCHEN" | "VIEWER") : undefined,
         status: body.status ? (body.status as "active" | "inactive") : undefined
       }
     });

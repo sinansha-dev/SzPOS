@@ -135,6 +135,59 @@ export const apiClient = {
     return res.json();
   },
 
+
+
+  // Expenses
+  async getExpenses(params?: { search?: string; category?: string; month?: string }) {
+    const url = new URL(`${API_BASE}/expenses`);
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.category) url.searchParams.set("category", params.category);
+    if (params?.month) url.searchParams.set("month", params.month);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch expenses");
+    return res.json();
+  },
+
+  async createExpense(data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/expenses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to create expense");
+    return res.json();
+  },
+
+  async updateExpense(id: string, data: Record<string, unknown>) {
+    const res = await fetch(`${API_BASE}/expenses/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error("Failed to update expense");
+    return res.json();
+  },
+
+  async deleteExpense(id: string) {
+    const res = await fetch(`${API_BASE}/expenses/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete expense");
+    return res.json();
+  },
+
+  async getExpenseMonthlySummary(month?: string) {
+    const url = new URL(`${API_BASE}/expenses/summary/monthly`);
+    if (month) url.searchParams.set("month", month);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch monthly expense summary");
+    return res.json();
+  },
+
+  async getExpenseAnalytics() {
+    const res = await fetch(`${API_BASE}/expenses/analytics`);
+    if (!res.ok) throw new Error("Failed to fetch expense analytics");
+    return res.json();
+  },
+
   async resetPOS(password: string) {
     const res = await fetch(`${API_BASE}/auth/reset-pos`, {
       method: "POST",
