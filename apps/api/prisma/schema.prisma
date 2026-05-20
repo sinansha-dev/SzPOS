@@ -86,6 +86,9 @@ model Return {
 }
 
 enum Role {
+  admin
+  cashier
+  manager
   OWNER
   ADMIN
   CASHIER
