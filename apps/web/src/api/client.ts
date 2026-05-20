@@ -15,7 +15,7 @@ function getAuthHeaders(extra?: Record<string, string>) {
 
 async function apiRequest(input: string | URL, init?: RequestInit): Promise<Response> {
   const headers = getAuthHeaders((init?.headers as Record<string, string> | undefined));
-  return apiRequest(input, { ...init, headers });
+  return fetch(input, { ...init, headers });
 }
 
 export const apiClient = {

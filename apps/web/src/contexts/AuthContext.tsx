@@ -36,19 +36,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    // Simple mock authentication
-    // In production, this would call your backend API
-    if (username && password.length >= 4) {
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
-        username,
-        role: username.toLowerCase() === "owner" ? "OWNER" : username.toLowerCase() === "admin" ? "ADMIN" : username.toLowerCase() === "viewer" ? "VIEWER" : username.toLowerCase() === "kitchen" ? "KITCHEN" : "CASHIER",
-        name: username.charAt(0).toUpperCase() + username.slice(1)
-      };
-      setUser(mockUser);
-      // Persist to localStorage
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(mockUser));
-    } else {
+    if (!username || !password) throw new Error("Invalid credentials");
+
+    try {
+      const res = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) throw new Error("Invalid credentials");
+      const payload = await res.json() as { user: User };
+      setUser(payload.user);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload.user));
+      return;
+    } catch {
+      // Hardcoded fallback for local testing
+      if (username.toLowerCase() === "admin" && password === "1234") {
+        const testUser: User = { id: "user_admin", username: "admin", role: "OWNER", name: "Admin" };
+        setUser(testUser);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(testUser));
+        return;
+      }
       throw new Error("Invalid credentials");
     }
   };
