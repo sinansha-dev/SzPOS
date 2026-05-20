@@ -168,3 +168,28 @@ reportsRouter.get("/item-wise-analytics", async (_req, res) => {
     return res.status(500).json({ error: "Failed to generate item-wise analytics" });
   }
 });
+
+
+reportsRouter.get("/expenses", async (req, res) => {
+  try {
+    const month = String(req.query.month ?? "").trim();
+    const now = new Date();
+    const defaultMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const target = /^\d{4}-\d{2}$/.test(month) ? month : defaultMonth;
+    const start = new Date(`${target}-01T00:00:00.000Z`);
+    const end = new Date(start);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+
+    const expenses = await prisma.expense.findMany({ where: { expenseDate: { gte: start, lt: end } } });
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+      acc[e.category] = (acc[e.category] ?? 0) + Number(e.amount);
+      return acc;
+    }, {});
+
+    res.json({ month: target, totalExpenses, expenseCount: expenses.length, byCategory });
+  } catch (error) {
+    console.error("Error generating expense report:", error);
+    return res.status(500).json({ error: "Failed to generate expense report" });
+  }
+});

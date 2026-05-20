@@ -8,22 +8,21 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
 const RESET_PASSWORD = process.env.RESET_PASSWORD || ADMIN_PASSWORD;
 
 authRouter.post("/login", (req, res) => {
-  const { email } = req.body as { email?: string };
+  const { username, password } = req.body as { username?: string; password?: string };
 
-  if (!email) {
-    return res.status(400).json({ error: "email is required" });
+  if (!username || !password) {
+    return res.status(400).json({ error: "username and password are required" });
   }
 
-  return res.json({
-    accessToken: "dev-access-token",
-    refreshToken: "dev-refresh-token",
-    user: {
-      id: "user_01",
-      name: "Admin",
-      role: "admin",
-      email
-    }
-  });
+  if (username.toLowerCase() === "admin" && password === ADMIN_PASSWORD) {
+    return res.json({
+      accessToken: "dev-access-token",
+      refreshToken: "dev-refresh-token",
+      user: { id: "user_admin", name: "Admin", role: "OWNER", username: "admin" }
+    });
+  }
+
+  return res.status(401).json({ error: "Invalid credentials" });
 });
 
 authRouter.post("/reset-pos", async (req, res) => {

@@ -11,21 +11,27 @@ import { reportsRouter } from "./routes/reports.js";
 import { printingRouter } from "./routes/printing.js";
 import { syncRouter } from "./routes/sync.js";
 import { usersRouter } from "./routes/users.js";
+import { expensesRouter } from "./routes/expenses.js";
+import { salesOrdersRouter } from "./routes/salesOrders.js";
+import { authContext, requirePermission } from "./auth/authorize.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
 
 app.use(cors());
 app.use(express.json());
+app.use(authContext);
 
 app.use("/api/auth", authRouter);
-app.use("/api/products", productsRouter);
-app.use("/api/sales", salesRouter);
-app.use("/api/inventory", inventoryRouter);
-app.use("/api/reports", reportsRouter);
-app.use("/api/printing", printingRouter);
+app.use("/api/products", requirePermission("inventory:view"), productsRouter);
+app.use("/api/sales", requirePermission("sales:view"), salesRouter);
+app.use("/api/inventory", requirePermission("inventory:view"), inventoryRouter);
+app.use("/api/reports", requirePermission("reports:view"), reportsRouter);
+app.use("/api/printing", requirePermission("sales:print"), printingRouter);
 app.use("/api/sync", syncRouter);
-app.use("/api/users", usersRouter);
+app.use("/api/expenses", requirePermission("expenses:view"), expensesRouter);
+app.use("/api/sales-orders", requirePermission("salesOrders:view"), salesOrdersRouter);
+app.use("/api/users", requirePermission("users:manage"), usersRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });

@@ -50,6 +50,33 @@ model PurchaseOrder {
   @@map("purchase_orders")
 }
 
+
+model Expense {
+  id          String   @id
+  accountId   String   @map("account_id")
+  title       String
+  description String?
+  category    String
+  amount      Decimal  @db.Decimal(12, 2)
+  expenseDate DateTime @db.Timestamptz() @map("expense_date")
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @db.Timestamptz() @map("created_at")
+
+  @@index([accountId, expenseDate])
+  @@index([category])
+  @@map("expenses")
+}
+
+model SalesOrder {
+  id        String   @id
+  status    String
+  payload   Json
+  createdAt DateTime @default(now()) @db.Timestamptz() @map("created_at")
+  updatedAt DateTime @updatedAt @db.Timestamptz() @map("updated_at")
+
+  @@map("sales_orders")
+}
+
 model Return {
   id        String   @id
   payload   Json
@@ -59,9 +86,11 @@ model Return {
 }
 
 enum Role {
-  admin
-  cashier
-  manager
+  OWNER
+  ADMIN
+  CASHIER
+  KITCHEN
+  VIEWER
 }
 
 enum Status {
