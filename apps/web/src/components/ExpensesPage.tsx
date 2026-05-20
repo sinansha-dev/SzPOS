@@ -61,14 +61,14 @@ export function ExpensesPage() {
   };
 
   return <PageLayout title="Expenses">
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div className="expenses-page">
+      <div className="expenses-toolbar">
         <input placeholder="Search title/description" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All Categories</option>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
       </div>
 
-      <div style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8 }}>
+      <div className="expenses-panel">
         <h3>{editingId ? "Edit Expense" : "Add Expense"}</h3>
         <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
           <input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -80,7 +80,7 @@ export function ExpensesPage() {
         <button onClick={submit}>{editingId ? "Update" : "Add"} Expense</button>
       </div>
 
-      <div>
+      <div className="expenses-summary">
         <p><strong>Monthly Summary:</strong> {summary?.expenseCount ?? 0} expenses | ${summary?.totalAmount?.toFixed?.(2) ?? "0.00"}</p>
         <p><strong>Visible Total:</strong> ${totalVisible.toFixed(2)}</p>
         <p><strong>Top Categories:</strong> {(analytics?.topCategories ?? []).map((c) => `${c.category} ($${c.amount.toFixed(2)})`).join(", ") || "N/A"}</p>
