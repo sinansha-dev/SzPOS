@@ -25,16 +25,22 @@ export function ExpensesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [summary, setSummary] = useState<{ totalAmount: number; expenseCount: number; byCategory: Record<string, number> } | null>(null);
   const [analytics, setAnalytics] = useState<{ topCategories: { category: string; amount: number }[] } | null>(null);
+  const [error, setError] = useState("");
 
   const load = async () => {
-    const [items, monthly, analytic] = await Promise.all([
-      apiClient.getExpenses({ search, category: category || undefined, month }),
-      apiClient.getExpenseMonthlySummary(month),
-      apiClient.getExpenseAnalytics()
-    ]);
-    setExpenses(items);
-    setSummary(monthly);
-    setAnalytics(analytic);
+    try {
+      const [items, monthly, analytic] = await Promise.all([
+        apiClient.getExpenses({ search, category: category || undefined, month }),
+        apiClient.getExpenseMonthlySummary(month),
+        apiClient.getExpenseAnalytics()
+      ]);
+      setExpenses(items);
+      setSummary(monthly);
+      setAnalytics(analytic);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load expenses");
+    }
   };
 
   useEffect(() => { load(); }, [search, category, month]);
@@ -52,12 +58,17 @@ export function ExpensesPage() {
       createdBy: "current-user"
     };
 
-    if (editingId) await apiClient.updateExpense(editingId, payload);
-    else await apiClient.createExpense(payload);
+    try {
+      if (editingId) await apiClient.updateExpense(editingId, payload);
+      else await apiClient.createExpense(payload);
 
-    setForm({ title: "", description: "", category: "Other", amount: "", expenseDate: new Date().toISOString().slice(0, 10) });
-    setEditingId(null);
-    await load();
+      setForm({ title: "", description: "", category: "Other", amount: "", expenseDate: new Date().toISOString().slice(0, 10) });
+      setEditingId(null);
+      await load();
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save expense");
+    }
   };
 
   return <PageLayout title="Expenses">
@@ -80,6 +91,8 @@ export function ExpensesPage() {
         <button onClick={submit}>{editingId ? "Update" : "Add"} Expense</button>
       </div>
 
+      {error && <div className="error-message">{error}</div>}
+
       <div className="expenses-summary">
         <p><strong>Monthly Summary:</strong> {summary?.expenseCount ?? 0} expenses | ${summary?.totalAmount?.toFixed?.(2) ?? "0.00"}</p>
         <p><strong>Visible Total:</strong> ${totalVisible.toFixed(2)}</p>
@@ -88,7 +101,7 @@ export function ExpensesPage() {
 
       <table>
         <thead><tr><th>Title</th><th>Category</th><th>Amount</th><th>Date</th><th>Actions</th></tr></thead>
-        <tbody>{expenses.map((e) => <tr key={e.id}><td>{e.title}<br /><small>{e.description}</small></td><td>{e.category}</td><td>${Number(e.amount).toFixed(2)}</td><td>{new Date(e.expenseDate).toLocaleDateString()}</td><td><button onClick={() => { setEditingId(e.id); setForm({ title: e.title, description: e.description || "", category: e.category, amount: String(e.amount), expenseDate: e.expenseDate.slice(0, 10) }); }}>Edit</button> <button onClick={async () => { await apiClient.deleteExpense(e.id); await load(); }}>Delete</button></td></tr>)}</tbody>
+        <tbody>{expenses.map((e) => <tr key={e.id}><td>{e.title}<br /><small>{e.description}</small></td><td>{e.category}</td><td>${Number(e.amount).toFixed(2)}</td><td>{new Date(e.expenseDate).toLocaleDateString()}</td><td><button onClick={() => { setEditingId(e.id); setForm({ title: e.title, description: e.description || "", category: e.category, amount: String(e.amount), expenseDate: e.expenseDate.slice(0, 10) }); }}>Edit</button> <button onClick={async () => { try { await apiClient.deleteExpense(e.id); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Failed to delete expense"); } }}>Delete</button></td></tr>)}</tbody>
       </table>
     </div>
   </PageLayout>;
